@@ -451,10 +451,11 @@ async function loadDeals() {
     .order('name');
   PORTFOLIO = (portfolio ?? []).map(r => r.name);
 
-  // NOTE: Origination channels are not stored in the DB.
-  // Add channel names directly to the ORIG_CHANNELS array below if needed,
-  // or create a ReportingNz_orig_channels table and restore this query.
-  ORIG_CHANNELS = [];
+ const { data: channels } = await sb.from('ReportingNz_orig_channels')
+    .select('name')
+    .order('sort_order')
+    .order('name');
+  ORIG_CHANNELS = (channels ?? []).map(r => r.name);
 
   const { data: members } = await sb.from('ReportingNz_team_members')
     .select('name')
