@@ -404,8 +404,8 @@
 
 <script>
 // ── SUPABASE ───────────────────────────────────────────────────────────────
-const SUPABASE_URL      = 'https://jgqevggjajpqhoyysped.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_1fcgac6EmGd8ZMHk5JEL-w_Q2vpPHJX';
+const SUPABASE_URL      = 'https://yphbrpbwpakjduhmoimw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwaGJycGJ3cGFramR1aG1vaW13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4NDI1ODksImV4cCI6MjA3NzQxODU4OX0.bqYSYCMX6eM0f_QUU8UbNLQsfr-DiMicJIQAujdlXKY';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ── DATA ──────────────────────────────────────────────────────────────────
@@ -427,7 +427,7 @@ function normalizeStage(stage) {
 }
 
 async function loadDeals() {
-  const { data: active } = await sb.from('deals')
+  const { data: active } = await sb.from('ReportingNz_deals')
     .select('name, stage')
     .in('stage', [
       'Working on a deal (significant effort)',
@@ -438,26 +438,25 @@ async function loadDeals() {
   DEALFLOW = (active ?? []).map(r => r.name);
   (active ?? []).forEach(r => { DEAL_STAGE_MAP[r.name] = normalizeStage(r.stage); });
 
-  const { data: longtail } = await sb.from('deals')
+  const { data: longtail } = await sb.from('ReportingNz_deals')
     .select('name, stage')
     .eq('stage', 'Being explored (meetings only)')
     .order('name');
   LONGTAIL_DEALS = (longtail ?? []).map(r => r.name);
   (longtail ?? []).forEach(r => { DEAL_STAGE_MAP[r.name] = normalizeStage(r.stage); });
 
-  const { data: portfolio } = await sb.from('deals')
+  const { data: portfolio } = await sb.from('ReportingNz_deals')
     .select('name')
     .eq('stage', 'Portfolio')
     .order('name');
   PORTFOLIO = (portfolio ?? []).map(r => r.name);
 
-  const { data: channels } = await sb.from('orig_channels')
-    .select('name')
-    .order('sort_order')
-    .order('name');
-  ORIG_CHANNELS = (channels ?? []).map(r => r.name);
+  // NOTE: Origination channels are not stored in the DB.
+  // Add channel names directly to the ORIG_CHANNELS array below if needed,
+  // or create a ReportingNz_orig_channels table and restore this query.
+  ORIG_CHANNELS = [];
 
-  const { data: members } = await sb.from('team_members')
+  const { data: members } = await sb.from('ReportingNz_team_members')
     .select('name')
     .eq('is_active', true)
     .order('sort_order')
@@ -514,7 +513,7 @@ async function loadUserEntries(userName) {
   submitBtn.disabled = true;
 
   try {
-    const { data, error } = await sb.from('time_entries')
+    const { data, error } = await sb.from('ReportingNz_time_entries')
       .select('category_key, pct_expected, hrs_actual')
       .eq('user_name', userName)
       .eq('week_start', weekStart);
@@ -783,7 +782,7 @@ async function submitForm() {
   }
 
   if (rows.length) {
-    const { error } = await sb.from('time_entries')
+    const { error } = await sb.from('ReportingNz_time_entries')
       .upsert(rows, { onConflict: 'user_name,week_start,category_key' });
     if (error) {
       alert('Save failed: ' + error.message);

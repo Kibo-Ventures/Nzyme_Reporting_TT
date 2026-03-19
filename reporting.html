@@ -199,10 +199,9 @@
 
 <script>
 // ── SUPABASE ───────────────────────────────────────────────────────────────
-const SUPABASE_URL      = 'https://jgqevggjajpqhoyysped.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_1fcgac6EmGd8ZMHk5JEL-w_Q2vpPHJX';
+const SUPABASE_URL      = 'https://yphbrpbwpakjduhmoimw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwaGJycGJ3cGFramR1aG1vaW13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4NDI1ODksImV4cCI6MjA3NzQxODU4OX0.bqYSYCMX6eM0f_QUU8UbNLQsfr-DiMicJIQAujdlXKY';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 // ── STATE ─────────────────────────────────────────────────────────────────
 let tfMode = 'week'; // 'week' or 'month'
 let DEAL_STAGE_MAP = {};
@@ -262,13 +261,13 @@ function updateLabels() {
 
 // ── DATA FETCHING ─────────────────────────────────────────────────────────
 async function loadDeals() {
-  const { data: deals } = await sb.from('deals').select('name, stage');
+  const { data: deals } = await sb.from('ReportingNz_deals').select('name, stage');
   (deals ?? []).forEach(r => { DEAL_STAGE_MAP[r.name] = normalizeStage(r.stage); });
 }
 
 // Helper to fetch entries based on Week vs Month
 async function fetchTimeframeEntries(categoryTypes) {
-  let query = sb.from('time_entries').select('*');
+  let query = sb.from('ReportingNz_time_entries').select('*');
   if (categoryTypes) query = query.in('category_type', categoryTypes);
   
   if (tfMode === 'week') {
@@ -520,7 +519,7 @@ async function drawDealsChart() {
   const canvas = document.getElementById('chart-deals');
   if (!canvas) return; const ctx = canvas.getContext('2d');
   
-  const { data: entries } = await sb.from('time_entries').select('category_key, hrs_actual').in('category_type', ['deal', 'longtail']);
+  const { data: entries } = await sb.from('ReportingNz_time_entries').select('category_key, hrs_actual').in('category_type', ['deal', 'longtail']);
 
   const hrsMap = {};
   (entries || []).forEach(r => { hrsMap[r.category_key] = (hrsMap[r.category_key]||0) + (r.hrs_actual||0); });
@@ -564,7 +563,7 @@ async function drawDealsChart() {
 // Also draw the dense deals matrix (Lifetime)
 async function drawDealsTable() {
   const container = document.getElementById('deals-table-container');
-  const { data: entries } = await sb.from('time_entries').select('user_name, category_key, hrs_actual').in('category_type', ['deal', 'longtail']).gt('hrs_actual', 0);
+  const { data: entries } = await sb.from('ReportingNz_time_entries').select('user_name, category_key, hrs_actual').in('category_type', ['deal', 'longtail']).gt('hrs_actual', 0);
   if (!entries || !entries.length) return;
 
   const users = [...new Set(entries.map(e => e.user_name))].sort();
@@ -616,7 +615,7 @@ async function sendChatMessage() {
   bodyEl.innerHTML += `<div id="${loadingId}" class="chat-message ai-message" style="color: var(--muted);">Thinking...</div>`; bodyEl.scrollTop = bodyEl.scrollHeight;
 
   try {
-    const { data: dbData } = await sb.from('time_entries').select('user_name, category_key, category_type, week_start, pct_expected, hrs_actual').or('pct_expected.gt.0,hrs_actual.gt.0').order('week_start', { ascending: false });
+    const { data: dbData } = await sb.from('ReportingNz_time_entries').select('user_name, category_key, category_type, week_start, pct_expected, hrs_actual').or('pct_expected.gt.0,hrs_actual.gt.0').order('week_start', { ascending: false });
     const { data: responseData, error: functionError } = await sb.functions.invoke('ai-chat', { body: { message: message, contextData: { timeEntries: dbData, dealStages: DEAL_STAGE_MAP } } });
     
     document.getElementById(loadingId)?.remove();
