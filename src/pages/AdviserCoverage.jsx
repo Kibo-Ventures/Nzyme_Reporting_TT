@@ -20,6 +20,16 @@ function qualityColor(pct) {
 
 const KAM_COLORS = ['#2d6a4a', '#2e6da4', '#c07830', '#6b3a80', '#3a4080', '#8a5020']
 
+const DEAL_STAGE_RANK = {
+  'Portfolio':                                            0,
+  'DD phase':                                             1,
+  'Working on a deal (significant effort)':               2,
+  'Under analysis (team assigned, moderate effort)':      3,
+  'Being explored (meetings only)':                       4,
+  'To be processed':                                      5,
+}
+// Any unknown/discarded stage gets rank 999 → sinks to bottom
+
 // ── Chart tooltip ───────────────────────────────────────────────────────────
 
 function CustomTooltip({ active, payload, label }) {
@@ -225,6 +235,15 @@ export default function AdviserCoverage() {
     [visibleDeals]
   )
 
+  // ── All-time total for KPI card ────────────────────────────────────────────
+  const totalDealsAllTime = useMemo(() =>
+    allDeals.filter(d =>
+      d.programme_bucket === 'Adviser Programme' ||
+      d.programme_bucket === 'No Adviser Data' ||
+      (showUntiered && d.programme_bucket === 'Untiered Connection')
+    ).length,
+  [allDeals, showUntiered])
+
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
     const total   = ltmDeals.length
@@ -303,7 +322,11 @@ export default function AdviserCoverage() {
     // but always put 'No Adviser Data' last
     const sorted = new Map(
       [...kamMap.entries()]
-        .sort((a, b) => a[0].localeCompare(b[0]))
+        .sort(([a], [b]) => {
+          if (a === 'Unknown KAM') return 1
+          if (b === 'Unknown KAM') return -1
+          return a.localeCompare(b)
+        })
         .map(([kam, advMap]) => {
           const sortedAdvisers = new Map(
             [...advMap.entries()].sort(([aName, aVal], [bName, bVal]) => {
@@ -322,7 +345,13 @@ export default function AdviserCoverage() {
   const memoDeals = useMemo(() => {
     const buckets = new Set(['Adviser Programme'])
     if (showUntiered) buckets.add('Untiered Connection')
-    return allDeals.filter((d) => d.is_ltm && buckets.has(d.programme_bucket))
+    return allDeals
+      .filter((d) => d.is_ltm && buckets.has(d.programme_bucket))
+      .sort((a, b) => {
+        const ra = DEAL_STAGE_RANK[a.stage] ?? 999
+        const rb = DEAL_STAGE_RANK[b.stage] ?? 999
+        return ra - rb
+      })
   }, [allDeals, showUntiered])
 
   // ── Sortable channel summary rows (for the per-adviser sort) ──────────────
@@ -381,9 +410,9 @@ export default function AdviserCoverage() {
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-4 gap-4">
         <KpiCard
-          title="Adviser Leads LTM"
-          value={kpis.total}
-          subtitle="filtered by selected buckets"
+          title="Total Adviser Deals"
+          value={totalDealsAllTime}
+          subtitle="all-time, incl. unattributed"
         />
         <KpiCard
           title="Quality Leads LTM"
