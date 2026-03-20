@@ -1,3 +1,6 @@
 node_modules/
 .env.local
 dist/
+.env
+.env.*.local
+*.local
