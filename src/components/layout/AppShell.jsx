@@ -4,7 +4,7 @@ import FilterBar from './FilterBar'
 
 export default function AppShell() {
   const { pathname } = useLocation()
-  const showFilters = pathname !== '/timetracker'
+  const showFilters = pathname !== '/timetracker' && pathname !== '/team'
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--paper)' }}>

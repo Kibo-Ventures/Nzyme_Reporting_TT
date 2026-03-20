@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { FilterProvider } from './hooks/useFilters'
 import AppShell from './components/layout/AppShell'
 import TimeTracker from './pages/TimeTracker'
+import TeamAnalytics from './pages/TeamAnalytics'
 import BoardPipeline from './pages/BoardPipeline'
 import ProprietaryDealflow from './pages/ProprietaryDealflow'
 import ChannelPerformance from './pages/ChannelPerformance'
@@ -15,6 +16,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/timetracker" replace />} />
           <Route path="/timetracker"  element={<TimeTracker />} />
+          <Route path="/team"         element={<TeamAnalytics />} />
           <Route path="/pipeline"     element={<BoardPipeline />} />
           <Route path="/proprietary"  element={<ProprietaryDealflow />} />
           <Route path="/channels"     element={<ChannelPerformance />} />
