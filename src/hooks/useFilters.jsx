@@ -1,12 +1,12 @@
 import { createContext, useContext, useState } from 'react'
 
 const defaultFilters = {
-  dateRange: 'ltm',   // 'ltm' | 'ytd' | 'all' | 'custom'
+  dateRange: 'ltm',        // 'ltm' | 'ytd' | 'all' | 'custom'
   dateFrom: null,
   dateTo: null,
-  kam: [],            // [] = all; multi-select array
-  stage: [],          // [] = all; multi-select array
-  channel: 'all',     // single string
+  dealCaptain: [],         // [] = all; multi-select array
+  stage: [],               // [] = all; multi-select array
+  channel: 'all',          // single string
 }
 
 const FilterContext = createContext(null)

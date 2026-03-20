@@ -3,22 +3,23 @@ import { supabase } from '../lib/supabase'
 import { useFilters } from './useFilters'
 import { applyDateRange } from '../lib/dateRange'
 
-// Deals with channels — date range, KAM, stage, and channel filters applied.
+// Deals with channels — date range, Deal Captain, stage, and channel filters applied.
 export function useChannelDeals() {
   const { filters } = useFilters()
-  const { dateRange, dateFrom, dateTo, kam, stage, channel } = filters
+  const { dateRange, dateFrom, dateTo, dealCaptain, stage, channel } = filters
 
   return useQuery({
-    queryKey: ['channel-deals', dateRange, dateFrom, dateTo, kam, stage, channel],
+    queryKey: ['channel-deals', dateRange, dateFrom, dateTo, dealCaptain, stage, channel],
     queryFn: async () => {
       let query = supabase
         .from('ReportingNz_deals')
-        .select('name, origination_channel, attractiveness_score, is_quality_lead, date_added, activity_description, stage')
-        .not('origination_channel', 'is', null)
+        .select('name, origination_channel, attractiveness_score, is_quality_lead, is_active, date_added, activity_description, stage, milestones')
         .order('date_added', { ascending: false })
 
       query = applyDateRange(query, { dateRange, dateFrom, dateTo })
-      if (kam.length > 0)    query = query.in('deal_captain', kam)
+      if (dealCaptain.length > 0) {
+        query = query.or(dealCaptain.map(n => `deal_captain.ilike.%${n}%`).join(','))
+      }
       if (stage.length > 0)  query = query.in('stage', stage)
       if (channel !== 'all') query = query.eq('origination_channel', channel)
 

@@ -1,17 +1,29 @@
 import { useMemo, useState } from 'react'
 import {
+  FunnelChart, Funnel, LabelList, Cell,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, LabelList,
+  ResponsiveContainer,
 } from 'recharts'
 import {
   useFunnelStages,
   useStageHistogram,
   useAdviserStageBreakdown,
+  useFunnelDeals,
+  useStageTimeInvestment,
 } from '../hooks/useFunnelAnalysis'
 import KpiCard from '../components/ui/KpiCard'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 // ── Stage display helpers ────────────────────────────────────────────────────
+
+const STAGE_ORDER = [
+  'To be processed',
+  'Being explored (meetings only)',
+  'Under analysis (team assigned, moderate effort)',
+  'Working on a deal (significant effort)',
+  'DD phase',
+  'Portfolio',
+]
 
 const STAGE_SHORT = {
   'To be processed':                                      'To Be Processed',
@@ -30,6 +42,9 @@ const STAGE_COLORS = [
   '#1a3a2a', // DD phase — dark green
   '#6b21a8', // Portfolio — purple
 ]
+
+// Colour per stage value (for pivot bar chart)
+const STAGE_COLOR_MAP = Object.fromEntries(STAGE_ORDER.map((s, i) => [s, STAGE_COLORS[i]]))
 
 // ── Histogram bucketing ──────────────────────────────────────────────────────
 
@@ -78,13 +93,194 @@ function convColor(pct) {
   return '#c0392b'
 }
 
+// ── Pivot toggle ─────────────────────────────────────────────────────────────
+
+function PivotToggle({ value, onChange }) {
+  const options = [
+    { key: null,       label: 'Total' },
+    { key: 'captains', label: 'Team Captains' },
+    { key: 'channels', label: 'Origination Channels' },
+    { key: 'advisers', label: 'Adviser Organisation' },
+  ]
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {options.map(opt => (
+        <button
+          key={opt.key ?? 'total'}
+          onClick={() => onChange(opt.key)}
+          style={{
+            padding: '5px 14px',
+            fontSize: '0.75rem',
+            fontWeight: value === opt.key ? 600 : 400,
+            border: '1px solid var(--rule)',
+            borderRadius: 6,
+            background: value === opt.key ? 'var(--accent)' : 'white',
+            color: value === opt.key ? 'white' : 'var(--ink)',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ── Build pivot bar data (stages on x-axis, stacked by pivot dimension) ──────
+
+function buildPivotData(deals, adviserDeals, pivotType) {
+  if (pivotType === 'advisers') {
+    // Group adviser deals by attributed_adviser × stage
+    const keys = [...new Set(adviserDeals.map(d => d.attributed_adviser || 'Unknown'))].sort()
+    return {
+      keys,
+      data: STAGE_ORDER
+        .filter(s => adviserDeals.some(d => d.stage === s))
+        .map(s => {
+          const row = { stage: STAGE_SHORT[s] ?? s }
+          keys.forEach(k => { row[k] = 0 })
+          adviserDeals.filter(d => d.stage === s).forEach(d => {
+            const k = d.attributed_adviser || 'Unknown'
+            row[k] = (row[k] || 0) + 1
+          })
+          return row
+        }),
+    }
+  }
+
+  const keyFn = pivotType === 'captains'
+    ? (d) => d.deal_captain || 'Unknown'
+    : (d) => d.origination_channel || 'Unattributed'
+
+  const keys = [...new Set(deals.map(keyFn))].sort()
+  const data = STAGE_ORDER
+    .filter(s => deals.some(d => d.stage === s))
+    .map(s => {
+      const row = { stage: STAGE_SHORT[s] ?? s }
+      keys.forEach(k => { row[k] = 0 })
+      deals.filter(d => d.stage === s).forEach(d => {
+        const k = keyFn(d)
+        row[k] = (row[k] || 0) + 1
+      })
+      return row
+    })
+  return { keys, data }
+}
+
+const PIVOT_COLORS = [
+  '#1a3a2a', '#2e6da4', '#c07830', '#6b21a8', '#3a4080',
+  '#8a5020', '#22c55e', '#6b7280', '#ef4444', '#3b82f6',
+]
+
+// ── Time Invested Table ───────────────────────────────────────────────────────
+
+function TimeInvestedTable({ stages, timeByStage }) {
+  const [expandedStage, setExpandedStage] = useState(null)
+
+  return (
+    <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 6 }}>
+      <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ background: '#fafaf8' }}>
+            {['Stage', 'Total Hours', 'Hrs / Deal Reached', 'Deals with Hours'].map((h, i) => (
+              <th
+                key={h}
+                className="px-3 py-2 text-xs font-semibold uppercase tracking-wide"
+                style={{
+                  color: 'var(--muted)',
+                  borderBottom: '2px solid var(--rule)',
+                  textAlign: i === 0 ? 'left' : 'right',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {stages.map((s, i) => {
+            const ti = timeByStage[s.stage_value]
+            const totalHrs = ti ? Math.round(ti.total) : 0
+            const hrsPerDeal = ti && s.reached_stage > 0
+              ? (ti.total / s.reached_stage).toFixed(1)
+              : null
+            const isExpanded = expandedStage === s.stage_value
+            const short = STAGE_SHORT[s.stage_value] ?? s.stage_value
+
+            return (
+              <>
+                <tr
+                  key={s.stage_value}
+                  onClick={() => setExpandedStage(isExpanded ? null : s.stage_value)}
+                  style={{
+                    borderBottom: isExpanded ? 'none' : '1px solid var(--rule)',
+                    background: isExpanded ? '#fffef9' : i % 2 === 0 ? 'white' : '#fafaf8',
+                    cursor: ti ? 'pointer' : 'default',
+                  }}
+                >
+                  <td className="px-3 py-2" style={{ color: 'var(--ink)', whiteSpace: 'nowrap' }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: 8, height: 8,
+                        borderRadius: '50%',
+                        background: STAGE_COLORS[i] ?? '#9ca3af',
+                        marginRight: 8,
+                        flexShrink: 0,
+                      }}
+                    />
+                    {ti && (
+                      <span style={{ fontSize: '0.6rem', color: 'var(--muted)', marginRight: 6, transition: 'transform 0.15s', display: 'inline-block', transform: isExpanded ? 'rotate(90deg)' : 'none' }}>
+                        ▶
+                      </span>
+                    )}
+                    {short}
+                  </td>
+                  <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: totalHrs > 0 ? 'var(--ink)' : 'var(--muted)' }}>
+                    {totalHrs > 0 ? `${totalHrs}h` : '—'}
+                  </td>
+                  <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--muted)' }}>
+                    {hrsPerDeal != null ? `${hrsPerDeal}h` : '—'}
+                  </td>
+                  <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--muted)' }}>
+                    {ti ? ti.deals.length : '—'}
+                  </td>
+                </tr>
+                {isExpanded && ti && (
+                  <tr key={`${s.stage_value}-expand`} style={{ borderBottom: '1px solid var(--rule)' }}>
+                    <td colSpan={4} style={{ padding: '0 0 8px 0', background: '#fffef9' }}>
+                      <div style={{ padding: '8px 16px 4px 40px', display: 'flex', flexWrap: 'wrap', gap: '6px 24px' }}>
+                        {ti.deals.map(d => (
+                          <div key={d.name} style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 200 }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--ink)', fontWeight: 500 }}>{d.name}</span>
+                            <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--muted)' }}>{d.hrs}h</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function FunnelAnalysis() {
   const { data: stages = [], isLoading, error } = useFunnelStages()
   const [selectedStage, setSelectedStage] = useState(null)
+  const [pivot, setPivot] = useState(null)
   const { data: histogramRaw = [], isLoading: histLoading } = useStageHistogram(selectedStage)
   const { data: adviserRaw = [] } = useAdviserStageBreakdown()
+  const { data: allDeals = [] } = useFunnelDeals()
+  const { data: timeInvestmentRaw = [] } = useStageTimeInvestment()
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -104,7 +300,7 @@ export default function FunnelAnalysis() {
         name:   STAGE_SHORT[s.stage_value] ?? s.stage_value,
         full:   s.stage_value,
         value:  s.reached_stage ?? 0,
-        color:  STAGE_COLORS[i] ?? '#9ca3af',
+        fill:   STAGE_COLORS[i] ?? '#9ca3af',
         rank:   s.stage_rank,
       })),
     [stages]
@@ -113,18 +309,26 @@ export default function FunnelAnalysis() {
   // ── Histogram ─────────────────────────────────────────────────────────────
   const histData = useMemo(() => bucketDays(histogramRaw), [histogramRaw])
 
-  // ── Adviser breakdown ─────────────────────────────────────────────────────
-  const adviserBreakdown = useMemo(() => {
+  // ── Time investment: hours per stage (aggregated) + per-deal drilldown ────
+  const timeByStage = useMemo(() => {
     const map = {}
-    for (const d of adviserRaw) {
-      const a = d.attributed_adviser || 'Unknown'
-      map[a] = (map[a] ?? 0) + 1
-    }
-    return Object.entries(map)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 15)
-  }, [adviserRaw])
+    timeInvestmentRaw.forEach(r => {
+      if (!map[r.stage_value]) map[r.stage_value] = { total: 0, deals: [] }
+      map[r.stage_value].total += r.total_hours || 0
+      if (r.total_hours > 0) {
+        map[r.stage_value].deals.push({ name: r.deal_name, hrs: Math.round(r.total_hours) })
+      }
+    })
+    // Sort deals within each stage by hours desc
+    Object.values(map).forEach(s => s.deals.sort((a, b) => b.hrs - a.hrs))
+    return map
+  }, [timeInvestmentRaw])
+
+  // ── Pivot data ─────────────────────────────────────────────────────────────
+  const pivotResult = useMemo(() => {
+    if (!pivot) return null
+    return buildPivotData(allDeals, adviserRaw, pivot)
+  }, [pivot, allDeals, adviserRaw])
 
   if (isLoading) {
     return (
@@ -181,44 +385,67 @@ export default function FunnelAnalysis() {
         />
       </div>
 
-      {/* ── Funnel bar chart ── */}
+      {/* ── Funnel chart ── */}
       <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
-        <div className="mb-4">
-          <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-            Deals Reaching Each Stage
+        <div className="mb-4 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+              Deals Reaching Each Stage
+            </div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>
+              All-time count of deals that reached or passed each stage
+            </div>
           </div>
-          <div className="text-xs" style={{ color: 'var(--muted)' }}>
-            All-time count of deals that reached or passed each stage
-          </div>
+          <PivotToggle value={pivot} onChange={setPivot} />
         </div>
 
         {funnelData.length === 0 ? (
           <div className="text-sm text-center py-8" style={{ color: 'var(--muted)' }}>
             No funnel data available
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={280}>
+        ) : pivot && pivotResult ? (
+          // Pivot: grouped bar chart — stages on x-axis, stacked by pivot dimension
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart
-              data={funnelData}
-              layout="vertical"
-              margin={{ top: 0, right: 60, bottom: 0, left: 130 }}
+              data={pivotResult.data}
+              margin={{ top: 8, right: 16, bottom: 60, left: 8 }}
             >
-              <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--rule)" />
-              <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--muted)' }} allowDecimals={false} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={125}
+              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--rule)" />
+              <XAxis
+                dataKey="stage"
                 tick={{ fontSize: 11, fill: 'var(--ink)' }}
+                angle={-30}
+                textAnchor="end"
+                interval={0}
               />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="value" name="Deals reached" radius={[0, 3, 3, 0]}>
-                <LabelList dataKey="value" position="right" style={{ fontSize: 11, fill: 'var(--muted)' }} />
-                {funnelData.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Bar>
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--muted)' }} />
+              <Tooltip contentStyle={{ fontSize: 12 }} />
+              {pivotResult.keys.slice(0, 10).map((k, i) => (
+                <Bar key={k} dataKey={k} stackId="a" fill={PIVOT_COLORS[i % PIVOT_COLORS.length]} />
+              ))}
             </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          // Default: FunnelChart
+          <ResponsiveContainer width="100%" height={300}>
+            <FunnelChart>
+              <Tooltip formatter={(v) => [v, 'Deals']} contentStyle={{ fontSize: 12 }} />
+              <Funnel dataKey="value" data={funnelData} isAnimationActive={false}>
+                {funnelData.map((entry, i) => (
+                  <Cell key={i} fill={entry.fill} />
+                ))}
+                <LabelList
+                  dataKey="name"
+                  position="center"
+                  style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', fill: 'white', fontWeight: 600 }}
+                />
+                <LabelList
+                  dataKey="value"
+                  position="right"
+                  style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: 'var(--muted)' }}
+                />
+              </Funnel>
+            </FunnelChart>
           </ResponsiveContainer>
         )}
       </div>
@@ -237,7 +464,7 @@ export default function FunnelAnalysis() {
           <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--accent-light)' }}>
-                {['Stage', 'Reached', "Didn't Advance", 'Cumul. Conv. %', 'Stage-to-Stage %', 'Avg Days'].map((h) => (
+                {['Stage', 'Reached', "Didn't Advance", 'Cumul. Conv. %', 'Stage-to-Stage %', 'Avg Days', 'Total Hrs', 'Hrs / Deal'].map((h) => (
                   <th
                     key={h}
                     className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide"
@@ -296,6 +523,23 @@ export default function FunnelAnalysis() {
                     <td className="px-3 py-2 font-mono" style={{ color: 'var(--muted)' }}>
                       {s.avg_days_in_stage != null ? `${Math.round(s.avg_days_in_stage)}d` : '—'}
                     </td>
+                    {(() => {
+                      const ti = timeByStage[s.stage_value]
+                      const totalHrs = ti ? Math.round(ti.total) : null
+                      const hrsPerDeal = ti && s.reached_stage > 0
+                        ? Math.round(ti.total / s.reached_stage)
+                        : null
+                      return (
+                        <>
+                          <td className="px-3 py-2 font-mono" style={{ color: 'var(--ink)' }}>
+                            {totalHrs != null ? `${totalHrs}h` : '—'}
+                          </td>
+                          <td className="px-3 py-2 font-mono" style={{ color: 'var(--muted)' }}>
+                            {hrsPerDeal != null ? `${hrsPerDeal}h` : '—'}
+                          </td>
+                        </>
+                      )
+                    })()}
                   </tr>
                 )
               })}
@@ -303,6 +547,21 @@ export default function FunnelAnalysis() {
           </table>
         </div>
       </div>
+
+      {/* ── Time invested per stage ── */}
+      {timeInvestmentRaw.length > 0 && (
+        <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
+          <div className="mb-4">
+            <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+              Time Invested per Stage
+            </div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>
+              Actual hours logged while each deal was in that stage. Click a stage row to expand deal breakdown.
+            </div>
+          </div>
+          <TimeInvestedTable stages={stages} timeByStage={timeByStage} />
+        </div>
+      )}
 
       {/* ── Time-in-stage histogram ── */}
       {selectedStage && (
@@ -337,45 +596,6 @@ export default function FunnelAnalysis() {
           )}
         </div>
       )}
-
-      {/* ── Adviser breakdown ── */}
-      <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
-        <div className="mb-4">
-          <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-            Deals by Adviser
-          </div>
-          <div className="text-xs" style={{ color: 'var(--muted)' }}>
-            All-time deal count per attributed adviser (top 15)
-          </div>
-        </div>
-
-        {adviserBreakdown.length === 0 ? (
-          <div className="text-sm text-center py-8" style={{ color: 'var(--muted)' }}>
-            No adviser data available
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={Math.max(200, adviserBreakdown.length * 28)}>
-            <BarChart
-              data={adviserBreakdown}
-              layout="vertical"
-              margin={{ top: 0, right: 40, bottom: 0, left: 140 }}
-            >
-              <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--rule)" />
-              <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--muted)' }} allowDecimals={false} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={135}
-                tick={{ fontSize: 11, fill: 'var(--ink)' }}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="count" name="Deals" fill="#2d6a4a" radius={[0, 3, 3, 0]}>
-                <LabelList dataKey="count" position="right" style={{ fontSize: 11, fill: 'var(--muted)' }} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
     </div>
   )
 }

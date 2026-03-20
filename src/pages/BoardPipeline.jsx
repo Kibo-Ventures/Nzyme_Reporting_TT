@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useBoardPipelineDeals } from '../hooks/useDeals'
 import KpiCard from '../components/ui/KpiCard'
 import { StageBadge } from '../components/ui/Badge'
-import { shortName, formatCurrency } from '../lib/utils'
+import { shortName } from '../lib/utils'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 // ── Stage group definitions ───────────────────────────────────────────────────
@@ -69,7 +69,7 @@ function DealDetail({ deal }) {
   const fields = [
     { label: 'Description',   value: deal.activity_description },
     { label: 'Team',          value: deal.team_involved ? deal.team_involved.split(';').map(n => n.trim()).filter(Boolean).map(shortName).join(', ') : null },
-    { label: 'Next Steps',    value: deal.milestones },
+    { label: 'Achieved Milestones', value: deal.milestones },
     { label: 'Deal Captain',  value: deal.deal_captain ? shortName(deal.deal_captain) : null },
     { label: 'IC Stage',      value: deal.ic_stage },
     { label: 'Date Added',    value: formatDate(deal.date_added) },
@@ -167,12 +167,12 @@ function DealRow({ deal, expanded, onToggle }) {
 
         {/* Revenue */}
         <div style={{ ...COL.revenues, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-          {formatCurrency(deal.revenues)}
+          {deal.revenues || '—'}
         </div>
 
         {/* EBITDA */}
         <div style={{ ...COL.ebitda, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-          {formatCurrency(deal.ebitda)}
+          {deal.ebitda || '—'}
         </div>
 
         {/* IC Stage */}
@@ -180,7 +180,7 @@ function DealRow({ deal, expanded, onToggle }) {
           {deal.ic_stage || '—'}
         </div>
 
-        {/* Next Steps */}
+        {/* Achieved Milestones */}
         <div style={{ ...COL.nextSteps, fontSize: '0.8rem', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {deal.milestones || '—'}
         </div>
@@ -275,7 +275,7 @@ function ColumnHeaders() {
     { label: 'Rev.', style: COL.revenues },
     { label: 'EBITDA', style: COL.ebitda },
     { label: 'IC Stage', style: COL.icStage },
-    { label: 'Next Steps', style: COL.nextSteps },
+    { label: 'Achieved Milestones', style: COL.nextSteps },
   ]
   return (
     <div

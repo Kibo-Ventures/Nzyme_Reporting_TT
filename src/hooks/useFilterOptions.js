@@ -1,16 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
-export function useKamOptions() {
+export function useDealCaptainOptions() {
   return useQuery({
-    queryKey: ['kamOptions'],
+    queryKey: ['dealCaptainOptions'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ReportingNz_deals')
         .select('deal_captain')
         .not('deal_captain', 'is', null)
       if (error) throw error
-      const unique = [...new Set(data.map(r => r.deal_captain).filter(Boolean))]
+      // Split multi-name strings (e.g. "Alice, Bob") into individual names
+      const names = data.flatMap(r =>
+        (r.deal_captain || '').split(/[,;]/).map(s => s.trim()).filter(Boolean)
+      )
+      const unique = [...new Set(names)]
       return unique.sort((a, b) => a.localeCompare(b))
     },
   })

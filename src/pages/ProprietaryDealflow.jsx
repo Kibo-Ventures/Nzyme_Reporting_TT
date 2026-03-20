@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   PieChart, Pie, Cell, Label,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList,
+  FunnelChart, Funnel,
   ResponsiveContainer,
 } from 'recharts'
 import { useProprietaryDeals, useTotalDealsCount } from '../hooks/useProprietaryDeals'
@@ -302,6 +303,7 @@ function DrilldownTable({ deals }) {
 
 export default function ProprietaryDealflow() {
   const [kamPivot, setKamPivot] = useState('volume')
+  const [funnelPivot, setFunnelPivot] = useState(false)
 
   const { data: deals = [], isLoading, error } = useProprietaryDeals()
   const { data: totalCount = 0 } = useTotalDealsCount()
@@ -344,9 +346,8 @@ export default function ProprietaryDealflow() {
       .sort((a, b) => b.value - a.value)
   }, [deals])
 
-  const kamBarKey   = kamPivot === 'volume' ? 'total' : 'quality'
-  const kamHeight   = Math.max(120, 40 + kamData.length * 34)
-  const funnelHeight = Math.max(120, 40 + funnelData.length * 34)
+  const kamBarKey = kamPivot === 'volume' ? 'total' : 'quality'
+  const kamHeight = Math.max(120, 40 + kamData.length * 34)
 
   if (isLoading) return <LoadingSpinner />
 
@@ -365,7 +366,7 @@ export default function ProprietaryDealflow() {
         <KpiCard title="Proprietary Deals"  value={kpis.total}           subtitle={`goal: ${PROPRIETARY_DEAL_GOAL}`} />
         <KpiCard title="% of Total Dealflow" value={`${kpis.pctOfTotal}%`} subtitle="excl. adviser-sourced" />
         <KpiCard title="Quality Leads"       value={kpis.quality}         subtitle="High or Med-High priority" />
-        <KpiCard title="Top KAM"             value={kpis.topKam}          subtitle={kpis.topKam !== '—' ? `${kpis.topKamCount} deal${kpis.topKamCount !== 1 ? 's' : ''}` : 'no data'} />
+        <KpiCard title="Top Deal Captain"    value={kpis.topKam}          subtitle={kpis.topKam !== '—' ? `${kpis.topKamCount} deal${kpis.topKamCount !== 1 ? 's' : ''}` : 'no data'} />
       </div>
 
       {deals.length === 0 ? (
@@ -422,24 +423,74 @@ export default function ProprietaryDealflow() {
           </div>
 
           {/* Funnel */}
-          <ChartCard title="Pipeline Stage Distribution" description="Proprietary deals by current pipeline stage.">
-            <ResponsiveContainer width="100%" height={funnelHeight}>
-              <BarChart data={funnelData} layout="vertical" margin={{ top: 4, right: 48, bottom: 4, left: 8 }}>
-                <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
-                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }} axisLine={false} tickLine={false} />
-                <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }} axisLine={false} tickLine={false} />
-                <Tooltip formatter={(v) => [v, 'Deals']} contentStyle={{ fontSize: 12 }} />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                  {funnelData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-                  <LabelList dataKey="value" position="right" style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <ChartCard
+            title="Pipeline Stage Distribution"
+            description="Proprietary deals by current pipeline stage."
+            action={
+              <PivotToggle
+                value={funnelPivot ? 'By Captain' : 'Total'}
+                onChange={v => setFunnelPivot(v === 'By Captain')}
+                options={[{ key: 'Total', label: 'Total' }, { key: 'By Captain', label: 'By Deal Captain' }]}
+              />
+            }
+          >
+            {funnelPivot ? (
+              // Pivot: grouped bar per stage, stacked by captain
+              (() => {
+                const captains = [...new Set(deals.map(d => d.deal_captain ? shortName(d.deal_captain) : 'Unknown'))].sort()
+                const captainColors = ['#1a3a2a', '#2e6da4', '#c07830', '#6b21a8', '#3a4080', '#8a5020']
+                const pivotData = FUNNEL_STAGE_ORDER
+                  .filter(s => deals.some(d => d.stage === s))
+                  .map(s => {
+                    const row = { name: FUNNEL_STAGE_LABELS[s] ?? s }
+                    captains.forEach(c => { row[c] = 0 })
+                    deals.filter(d => d.stage === s).forEach(d => {
+                      const c = d.deal_captain ? shortName(d.deal_captain) : 'Unknown'
+                      row[c] = (row[c] || 0) + 1
+                    })
+                    return row
+                  })
+                return (
+                  <ResponsiveContainer width="100%" height={Math.max(120, 40 + pivotData.length * 40)}>
+                    <BarChart data={pivotData} layout="vertical" margin={{ top: 4, right: 48, bottom: 4, left: 8 }}>
+                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }} axisLine={false} tickLine={false} />
+                      <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ fontSize: 12 }} />
+                      {captains.map((c, i) => (
+                        <Bar key={c} dataKey={c} stackId="a" fill={captainColors[i % captainColors.length]} radius={i === captains.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]} />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                )
+              })()
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <FunnelChart>
+                  <Tooltip formatter={(v) => [v, 'Deals']} contentStyle={{ fontSize: 12 }} />
+                  <Funnel dataKey="value" data={[...funnelData].sort((a, b) => b.value - a.value)} isAnimationActive={false}>
+                    {[...funnelData].sort((a, b) => b.value - a.value).map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                    <LabelList
+                      dataKey="name"
+                      position="center"
+                      style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', fill: 'white', fontWeight: 600 }}
+                    />
+                    <LabelList
+                      dataKey="value"
+                      position="right"
+                      style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
+                    />
+                  </Funnel>
+                </FunnelChart>
+              </ResponsiveContainer>
+            )}
           </ChartCard>
 
           {/* Drilldown table */}
-          <ChartCard title="All Proprietary Deals" description="Click column headers to sort.">
-            <DrilldownTable deals={deals} />
+          <ChartCard title="All Proprietary Deals" description="Click column headers to sort. Active deals shown first.">
+            <DrilldownTable deals={[...deals].sort((a, b) => (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0))} />
           </ChartCard>
         </>
       )}

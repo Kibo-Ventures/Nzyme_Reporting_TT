@@ -76,7 +76,7 @@ function MemoTable({ deals }) {
         <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--accent-light)' }}>
-              {['Deal Name', 'Attractiveness', 'Introducer', 'Adviser', 'Date', 'KAM', 'Description'].map((h) => (
+              {['Deal Name', 'Attractiveness', 'Introducer', 'Adviser', 'Date', 'Deal Captain', 'Description'].map((h) => (
                 <th
                   key={h}
                   className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide"
@@ -153,7 +153,7 @@ function AdviserGroupTable({ grouped }) {
       <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ background: 'var(--accent-light)' }}>
-            {['KAM', 'Adviser', 'Tier', 'Total Leads', 'Quality Leads', '% Quality'].map((h) => (
+            {['Deal Captain', 'Adviser', 'Tier', 'Total Leads', 'Quality Leads', '% Quality'].map((h) => (
               <th
                 key={h}
                 className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide"

@@ -877,3 +877,81 @@ these are shown inline in the table already.
 - Default filter: `programme_bucket = 'Adviser Programme'` 
 - Toggle available to include `'Untiered Connection'` bucket
 - `'No Adviser Data'` bucket always visible as a separate row at the bottom of the table
+
+### Dashboard 7 — Team Analytics (port from reporting_old.html)
+
+**Route:** `/team`
+**Add to sidebar under REPORTING, below Time Tracker**
+
+This page ports the three charts from `reporting_old.html` exactly.
+Read that file carefully before building.
+
+**Timeframe toggle:** This Week / This Month (not connected to global LTM filter)
+
+**Chart 1 — Team Capacity**
+Stacked bar chart per team member showing % committed by category.
+Categories: Dealflow, Internal, Portfolio, Origination.
+Data from: `ReportingNz_time_entries` joined to `ReportingNz_team_members`.
+Use `pct_expected` for week view, average across weeks for month view.
+Expandable matrix table below (team member × category breakdown).
+
+**Chart 2 — Deal Workload (FTE)**
+Horizontal bar chart — FTE per active deal.
+FTE = pct_expected / 100 summed across all team members per deal.
+Filterable by stage: DD Phase / Working on Deal / Under Analysis.
+Data from: `ReportingNz_time_entries` joined to `ReportingNz_deals`.
+
+**Chart 3 — Lifetime Hours by Deal**
+Bar chart — cumulative `hrs_actual` per deal, all time, sorted descending.
+Filterable by stage. Expandable matrix table (deal × team member).
+Data from: `ReportingNz_time_entries` joined to `ReportingNz_deals`.
+
+**AI Chat Widget**
+Floating button bottom-right (same position as original).
+Calls Supabase edge function `ai-chat` via `supabase.functions.invoke('ai-chat', {...})`.
+Passes: `{ message: userMessage, contextData: { timeEntries: [...], dealStages: {...} } }`
+Renders structured response: `bluf_summary` + `candidates[]` with name, reallocatable_pct, from_tasks.
+Keep the same card-style rendering from the original.
+Build this last within this page — get the three charts working first.
+
+**AI Chat Widget — EXCLUDED from this build.**
+Do not implement the AI chat widget on this page or any other page.
+It will be added as a final step across the entire reporting suite once all dashboards are complete.
+
+**Kibo BI Dashboard — Iteration 1.1 Requirements**
+
+This passage outlines the bug fixes, UX improvements, and data logic changes for Version 1.1 of the React BI Dashboard. Please implement these changes sequentially and ask for clarification if any data structure blocks you.
+
+## 1. Global Filter Bar Updates
+* **Fix Broken Inputs:** Ensure the Date Range and Channel dropdowns correctly update the `useFilters` context and apply the appropriate filters to the Supabase queries across all relevant dashboards.
+* **KAM to Deal Captain:** * Rename the "KAM" filter label to "Deal Captain" everywhere in the UI. 
+  * **Data Cleaning:** The `deal_captain` field in the database sometimes contains multiple names in a single string. When populating the dropdown options for this filter, fetch the raw strings, split them (handling commas or semicolons), trim whitespace, and generate a clean list of *unique individual names*. 
+  * **Filtering Logic:** When a specific Deal Captain is selected, the database query must use a "contains" or `ILIKE` match rather than an exact `===` match, so that deals with multiple captains are still returned if the selected captain is among them.
+* **Funnel Context:** When rendering the `FilterBar` inside the `FunnelAnalysis.jsx` page, automatically grey out/disable the Date Range filter, as the funnel relies on lifetime data.
+
+## 2. UI & Data Formatting Fixes
+* **Financials Formatting:** The `revenues` and `ebitda` data from Affinity are saved as non-uniform text strings (not clean numbers). **Do not apply any formatting or math to these fields.** Simply display the raw string value exactly as it comes from the Supabase database to avoid breaking the UI with NaN errors.
+* **Table Sorting:** Across all Drilldown and Memo tables in the app, implement default sorting: Active deals (`is_active = true`) must appear at the top, and inactive deals at the bottom.
+* **Team Analytics:** Adjust the layout of the Team Analytics sections so the charts/data are placed next to each other (side-by-side) or made wider to utilize empty screen space better.
+
+## 3. Board Pipeline Updates
+* **Column Renaming:** Rename the "Next Steps" column header in the UI to "Achieved Milestones", as this better reflects the actual data being pulled from the `milestones` column.
+
+## 4. Proprietary Dealflow Logic
+* **Update Definition:** Change the definition of what constitutes a "Proprietary" deal. 
+  * **Logic:** A deal is proprietary if its `origination_channel` does NOT contain the word "Network" AND does NOT contain the word "Adviser". 
+  * (This should effectively capture "Inbound Cold Contact (Marketing)", "Direct Reach Out - Quali Signal Identification", "Direct Reach Out - Quanti Signal Identification", etc.).
+* **Add Funnel:** Add a Funnel chart component to the Proprietary Dealflow page specifically filtering for these proprietary deals, tracking how far they progressed historically. Maintain the ability to pivot this chart by Deal Captain.
+
+## 5. Channel Breakdown Updates
+* **NBO/LOI Metric:** Add a new column to the Channel Breakdown table calculating "Cost per NBO/LOI". 
+  * **Logic:** An NBO/LOI is defined as any deal where the `milestones` text column contains the exact string `"NBO Sent"`. Count these deals per channel and use them as the denominator for the cost efficiency calculation.
+* **Include Nulls (Unattributed):** Ensure deals with a `NULL` or empty origination channel are no longer excluded. Group them into a new "Unattributed" or "No Data" row in the Channel Breakdown table.
+* **Note on Adviser Coverage:** *Do not make any logic changes to the Adviser Coverage dashboard or queries in this iteration.* Keep it exactly as it was in V1.
+
+## 6. Funnel Analysis 2.0 & Supabase Walkthrough
+* **Visual Overhaul:** Replace the current horizontal bar chart on the Funnel page with a true Recharts `FunnelChart`. Remove the Adviser sub-chart at the bottom.
+* **New Pivot Actions:** Add toggle buttons to the Funnel Chart allowing the user to filter the visual funnel flow specifically by: Team Captains, Origination Channels, or Adviser Organization.
+* **Interactive SQL Setup Task:**
+  * We need to match the time invested from the `ReportingNz_time_entries` table to the timestamps that define the stage of a deal (`ReportingNz_deal_stage_history`) to see how many hours are put into advancing from one stage to the next.
+  * **Agent Instruction:** Before writing the frontend code for this specific feature, please walk me step-by-step through setting up the necessary SQL View in the Supabase SQL Editor. The logic needs to look at a deal's time in a specific stage (between `changed_at` and `exited_at`) and sum the `hrs_actual` from the time entries where the `week_start` falls within that window. Ask me to execute the SQL and confirm it works before proceeding with the React implementation.

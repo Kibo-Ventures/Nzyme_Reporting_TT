@@ -1,5 +1,5 @@
 import { useFilters } from '../../hooks/useFilters'
-import { useKamOptions, useStageOptions, useChannelOptions, useDataFreshness } from '../../hooks/useFilterOptions'
+import { useDealCaptainOptions, useStageOptions, useChannelOptions, useDataFreshness } from '../../hooks/useFilterOptions'
 import MultiSelect from '../ui/MultiSelect'
 
 const DATE_PILLS = [
@@ -9,17 +9,17 @@ const DATE_PILLS = [
   { key: 'custom', label: 'Custom' },
 ]
 
-export default function FilterBar() {
+export default function FilterBar({ disableDateRange = false }) {
   const { filters, setFilter } = useFilters()
-  const kamQuery = useKamOptions()
+  const dealCaptainQuery = useDealCaptainOptions()
   const stageQuery = useStageOptions()
   const channelQuery = useChannelOptions()
   const freshnessQuery = useDataFreshness()
 
-  const kamOptions = kamQuery.data ?? []
+  const dealCaptainOptions = dealCaptainQuery.data ?? []
   const stageOptions = stageQuery.data ?? []
   const channelOptions = channelQuery.data ?? []
-  const isLoading = kamQuery.isLoading || stageQuery.isLoading || channelQuery.isLoading
+  const isLoading = dealCaptainQuery.isLoading || stageQuery.isLoading || channelQuery.isLoading
 
   return (
     <div
@@ -37,7 +37,18 @@ export default function FilterBar() {
       }}
     >
       {/* Date range pills */}
-      <div style={{ display: 'flex', gap: '2px', background: 'var(--rule)', borderRadius: '7px', padding: '2px' }}>
+      <div
+        title={disableDateRange ? 'Funnel uses lifetime data' : undefined}
+        style={{
+          display: 'flex',
+          gap: '2px',
+          background: 'var(--rule)',
+          borderRadius: '7px',
+          padding: '2px',
+          opacity: disableDateRange ? 0.4 : 1,
+          pointerEvents: disableDateRange ? 'none' : 'auto',
+        }}
+      >
         {DATE_PILLS.map(pill => (
           <button
             key={pill.key}
@@ -61,7 +72,7 @@ export default function FilterBar() {
       </div>
 
       {/* Custom date inputs */}
-      {filters.dateRange === 'custom' && (
+      {!disableDateRange && filters.dateRange === 'custom' && (
         <>
           <input
             type="date"
@@ -104,10 +115,10 @@ export default function FilterBar() {
       ) : (
         <>
           <MultiSelect
-            options={kamOptions}
-            value={filters.kam}
-            onChange={val => setFilter({ kam: val })}
-            placeholder="KAM"
+            options={dealCaptainOptions}
+            value={filters.dealCaptain}
+            onChange={val => setFilter({ dealCaptain: val })}
+            placeholder="Deal Captain"
           />
           <MultiSelect
             options={stageOptions}

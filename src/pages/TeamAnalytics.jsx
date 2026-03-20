@@ -506,7 +506,7 @@ export default function TeamAnalytics() {
   const lifeHeight = Math.max(120, 40 + lifetimeData.length * fteRowH)
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
       {/* Header */}
       <div
         style={{
@@ -599,114 +599,117 @@ export default function TeamAnalytics() {
             </Accordion>
           </ChartCard>
 
-          {/* ── Deal Workload FTE ── */}
-          <ChartCard
-            title={timeframe === 'week' ? 'Deal Workload (FTE) — This Week' : 'Average Deal Workload (FTE) — This Month'}
-            description="Total FTE dedicated to active deals. Click a stage to filter."
-          >
-            <StageFilterPills filters={fteFilters} onChange={setFteFilters} />
-            {fteData.length === 0 ? (
-              <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
-                No matching deal flow found.
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={fteHeight}>
-                <BarChart data={fteData} layout="vertical" margin={{ top: 4, right: 56, bottom: 16, left: 8 }}>
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
-                  <XAxis
-                    type="number"
-                    tickFormatter={v => `${v} FTE`}
-                    tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    width={188}
-                    tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    formatter={(value) => [`${value} FTE`, 'Workload']}
-                    labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}
-                    contentStyle={{ fontSize: 12 }}
-                  />
-                  <Bar dataKey="fte" radius={[0, 4, 4, 0]}>
-                    {fteData.map((entry, i) => (
-                      <Cell key={i} fill={STAGE_COLORS[entry.stage] ?? '#2d6a4a'} />
-                    ))}
-                    <LabelList
-                      dataKey="fte"
-                      position="right"
-                      formatter={v => v.toFixed(2)}
-                      style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
+          {/* ── FTE + Lifetime side-by-side ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28 }}>
+            {/* Deal Workload FTE */}
+            <ChartCard
+              title={timeframe === 'week' ? 'Deal Workload (FTE) — This Week' : 'Avg Deal Workload (FTE) — This Month'}
+              description="Total FTE dedicated to active deals. Click a stage to filter."
+            >
+              <StageFilterPills filters={fteFilters} onChange={setFteFilters} />
+              {fteData.length === 0 ? (
+                <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
+                  No matching deal flow found.
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={fteHeight}>
+                  <BarChart data={fteData} layout="vertical" margin={{ top: 4, right: 56, bottom: 16, left: 8 }}>
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                    <XAxis
+                      type="number"
+                      tickFormatter={v => `${v} FTE`}
+                      tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
+                      axisLine={false}
+                      tickLine={false}
                     />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
-
-          {/* ── Lifetime Hours by Deal ── */}
-          <ChartCard
-            title="Lifetime Hours by Deal"
-            description="Cumulative actual hours invested across all tracked deals. Click a stage to filter."
-          >
-            <StageFilterPills filters={lifetimeFilters} onChange={setLifetimeFilters} />
-            {lifetimeQ.isLoading ? (
-              <LoadingSpinner />
-            ) : lifetimeData.length === 0 ? (
-              <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
-                No matching hours logged.
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={lifeHeight}>
-                <BarChart data={lifetimeData} layout="vertical" margin={{ top: 4, right: 60, bottom: 16, left: 8 }}>
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    width={188}
-                    tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    formatter={(value) => [`${value} hrs`, 'Actual hours']}
-                    labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}
-                    contentStyle={{ fontSize: 12 }}
-                  />
-                  <Bar dataKey="hrs" radius={[0, 4, 4, 0]}>
-                    {lifetimeData.map((entry, i) => (
-                      <Cell key={i} fill={STAGE_COLORS[entry.stage] ?? '#2d6a4a'} />
-                    ))}
-                    <LabelList
-                      dataKey="hrs"
-                      position="right"
-                      formatter={v => `${v}h`}
-                      style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      width={160}
+                      tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
+                      axisLine={false}
+                      tickLine={false}
                     />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+                    <Tooltip
+                      formatter={(value) => [`${value} FTE`, 'Workload']}
+                      labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <Bar dataKey="fte" radius={[0, 4, 4, 0]}>
+                      {fteData.map((entry, i) => (
+                        <Cell key={i} fill={STAGE_COLORS[entry.stage] ?? '#2d6a4a'} />
+                      ))}
+                      <LabelList
+                        dataKey="fte"
+                        position="right"
+                        formatter={v => v.toFixed(2)}
+                        style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
 
-            <Accordion summary="Breakdown Lifetime Hours (Matrix View)">
-              <LifetimeMatrix
-                entries={lifetimeEntries}
-                stageMap={stageMap}
-                stageFilters={lifetimeFilters}
-              />
-            </Accordion>
-          </ChartCard>
+            {/* Lifetime Hours by Deal */}
+            <ChartCard
+              title="Lifetime Hours by Deal"
+              description="Cumulative actual hours invested across all tracked deals. Click a stage to filter."
+            >
+              <StageFilterPills filters={lifetimeFilters} onChange={setLifetimeFilters} />
+              {lifetimeQ.isLoading ? (
+                <LoadingSpinner />
+              ) : lifetimeData.length === 0 ? (
+                <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
+                  No matching hours logged.
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={lifeHeight}>
+                  <BarChart data={lifetimeData} layout="vertical" margin={{ top: 4, right: 60, bottom: 16, left: 8 }}>
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                    <XAxis
+                      type="number"
+                      tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      width={160}
+                      tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      formatter={(value) => [`${value} hrs`, 'Actual hours']}
+                      labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <Bar dataKey="hrs" radius={[0, 4, 4, 0]}>
+                      {lifetimeData.map((entry, i) => (
+                        <Cell key={i} fill={STAGE_COLORS[entry.stage] ?? '#2d6a4a'} />
+                      ))}
+                      <LabelList
+                        dataKey="hrs"
+                        position="right"
+                        formatter={v => `${v}h`}
+                        style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+
+              <Accordion summary="Breakdown Lifetime Hours (Matrix View)">
+                <LifetimeMatrix
+                  entries={lifetimeEntries}
+                  stageMap={stageMap}
+                  stageFilters={lifetimeFilters}
+                />
+              </Accordion>
+            </ChartCard>
+          </div>
         </>
       )}
     </div>

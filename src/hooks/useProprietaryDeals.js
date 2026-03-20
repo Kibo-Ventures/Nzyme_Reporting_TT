@@ -3,25 +3,27 @@ import { supabase } from '../lib/supabase'
 import { useFilters } from './useFilters'
 import { applyDateRange } from '../lib/dateRange'
 
-// Main query: all proprietary deals (not via Adviser / Broker), with global filters applied.
+// Main query: proprietary deals (direct / inbound, excluding Network and Adviser channels).
 export function useProprietaryDeals() {
   const { filters } = useFilters()
-  const { dateRange, dateFrom, dateTo, kam, stage, channel } = filters
+  const { dateRange, dateFrom, dateTo, dealCaptain, stage, channel } = filters
 
   return useQuery({
-    queryKey: ['proprietary-deals', dateRange, dateFrom, dateTo, kam, stage, channel],
+    queryKey: ['proprietary-deals', dateRange, dateFrom, dateTo, dealCaptain, stage, channel],
     queryFn: async () => {
       let query = supabase
         .from('ReportingNz_deals')
         .select(
-          'name, stage, deal_captain, origination_channel, attractiveness, attractiveness_score, is_quality_lead, date_added'
+          'name, stage, deal_captain, origination_channel, attractiveness, attractiveness_score, is_quality_lead, date_added, is_active'
         )
-        .neq('origination_channel', 'Adviser / Broker')
-        .not('origination_channel', 'is', null)
+        .not('origination_channel', 'ilike', '%Network%')
+        .not('origination_channel', 'ilike', '%Adviser%')
         .order('date_added', { ascending: false })
 
       query = applyDateRange(query, { dateRange, dateFrom, dateTo })
-      if (kam.length > 0)     query = query.in('deal_captain', kam)
+      if (dealCaptain.length > 0) {
+        query = query.or(dealCaptain.map(n => `deal_captain.ilike.%${n}%`).join(','))
+      }
       if (stage.length > 0)   query = query.in('stage', stage)
       if (channel !== 'all')  query = query.eq('origination_channel', channel)
 

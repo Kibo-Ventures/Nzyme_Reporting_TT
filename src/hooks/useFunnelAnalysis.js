@@ -51,3 +51,33 @@ export function useAdviserStageBreakdown() {
     staleTime: 10 * 60 * 1000,
   })
 }
+
+// Hours invested per deal × stage from the SQL view.
+export function useStageTimeInvestment() {
+  return useQuery({
+    queryKey: ['stage-time-investment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ReportingNz_stage_time_investment')
+        .select('deal_name, stage_value, total_hours')
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+// Raw deals for pivot breakdowns on the funnel page.
+export function useFunnelDeals() {
+  return useQuery({
+    queryKey: ['funnel-deals'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ReportingNz_deals')
+        .select('name, stage, deal_captain, origination_channel')
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}

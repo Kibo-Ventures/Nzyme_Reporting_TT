@@ -4,14 +4,14 @@ import { useFilters } from './useFilters'
 import { applyDateRange } from '../lib/dateRange'
 
 // All adviser-attributed deals from the pre-joined view.
-// Global filters (date, KAM, stage) are applied server-side.
+// Global filters (date, Deal Captain, stage) are applied server-side.
 // programme_bucket filtering is done client-side (toggle).
 export function useAdviserDeals() {
   const { filters } = useFilters()
-  const { dateRange, dateFrom, dateTo, kam, stage } = filters
+  const { dateRange, dateFrom, dateTo, dealCaptain, stage } = filters
 
   return useQuery({
-    queryKey: ['adviser-deals', dateRange, dateFrom, dateTo, kam, stage],
+    queryKey: ['adviser-deals', dateRange, dateFrom, dateTo, dealCaptain, stage],
     queryFn: async () => {
       let query = supabase
         .from('ReportingNz_adviser_deals')
@@ -24,7 +24,9 @@ export function useAdviserDeals() {
         .order('date_added', { ascending: false })
 
       query = applyDateRange(query, { dateRange, dateFrom, dateTo })
-      if (kam.length > 0)   query = query.in('kam', kam)
+      if (dealCaptain.length > 0) {
+        query = query.or(dealCaptain.map(n => `kam.ilike.%${n}%`).join(','))
+      }
       if (stage.length > 0) query = query.in('stage', stage)
 
       const { data, error } = await query

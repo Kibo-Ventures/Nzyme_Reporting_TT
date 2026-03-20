@@ -79,6 +79,8 @@ const COLS = [
   { key: 'quality',           label: 'Quality Leads',            align: 'right' },
   { key: 'qualityRate',       label: '% Quality',                align: 'right' },
   { key: 'avgPriority',       label: 'Avg Priority',             align: 'right' },
+  { key: 'nboCount',          label: 'NBO / LOI',                align: 'right' },
+  { key: 'costPerNbo',        label: 'Cost / NBO/LOI',           align: 'right' },
   { key: 'oneOffCost',        label: 'One-off Cost',             align: 'right' },
   { key: 'recurringCost',     label: 'Recurring Cost (actual)',  align: 'right' },
   { key: 'totalHours',        label: 'Total Hours',              align: 'right' },
@@ -158,6 +160,12 @@ function ChannelTable({ rows }) {
                 {row.avgPriority != null ? row.avgPriority.toFixed(1) : '—'}
               </td>
               <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
+                {row.nboCount > 0 ? row.nboCount : '—'}
+              </td>
+              <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
+                {formatEur(row.costPerNbo)}
+              </td>
+              <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
                 {formatEur(row.oneOffCost)}
               </td>
               <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
@@ -195,7 +203,13 @@ function ChannelTable({ rows }) {
 function MemoList({ deals }) {
   const [showAll, setShowAll] = useState(false)
   const quality = useMemo(
-    () => deals.filter(d => d.is_quality_lead).sort((a, b) => new Date(b.date_added) - new Date(a.date_added)),
+    () => deals
+      .filter(d => d.is_quality_lead)
+      .sort((a, b) => {
+        const activeSort = (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0)
+        if (activeSort !== 0) return activeSort
+        return new Date(b.date_added) - new Date(a.date_added)
+      }),
     [deals]
   )
   const visible = showAll ? quality : quality.slice(0, 10)
@@ -278,17 +292,18 @@ export default function ChannelPerformance() {
     const costsMap   = Object.fromEntries(costs.map(c => [c.channel_name, c]))
     const actualsMap = Object.fromEntries(actuals.map(a => [a.channel, a]))
 
-    // Aggregate deals per channel
+    // Aggregate deals per channel (null channel → 'Unattributed')
     const acc = {}
     deals.forEach(d => {
-      const ch = d.origination_channel
-      if (!acc[ch]) acc[ch] = { channel: ch, leads: 0, quality: 0, scoreSum: 0, scoreCount: 0 }
+      const ch = d.origination_channel || 'Unattributed'
+      if (!acc[ch]) acc[ch] = { channel: ch, leads: 0, quality: 0, scoreSum: 0, scoreCount: 0, nboCount: 0 }
       acc[ch].leads++
       if (d.is_quality_lead) acc[ch].quality++
       if (d.attractiveness_score != null) {
         acc[ch].scoreSum += d.attractiveness_score
         acc[ch].scoreCount++
       }
+      if (d.milestones && d.milestones.includes('NBO Sent')) acc[ch].nboCount++
     })
 
     return Object.values(acc).map(row => {
@@ -298,6 +313,7 @@ export default function ChannelPerformance() {
       const qualityRate = row.leads > 0 ? Math.round((row.quality / row.leads) * 100) : 0
       const avgPriority = row.scoreCount > 0 ? row.scoreSum / row.scoreCount : null
       const costPerQL   = recurring && row.quality > 0 ? recurring / row.quality : null
+      const costPerNbo  = recurring && row.nboCount > 0 ? recurring / row.nboCount : null
 
       return {
         channel:            row.channel,
@@ -305,6 +321,8 @@ export default function ChannelPerformance() {
         quality:            row.quality,
         qualityRate,
         avgPriority,
+        nboCount:           row.nboCount,
+        costPerNbo,
         oneOffCost:         cost.one_off_cost ?? null,
         recurringCost:      recurring,
         totalHours:         actual.total_hours ?? null,
