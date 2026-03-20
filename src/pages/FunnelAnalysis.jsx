@@ -572,21 +572,6 @@ export default function FunnelAnalysis() {
         </div>
       </div>
 
-      {/* ── Time invested per stage ── */}
-      {timeInvestmentRaw.length > 0 && (
-        <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
-          <div className="mb-4">
-            <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-              Time Invested per Stage
-            </div>
-            <div className="text-xs" style={{ color: 'var(--muted)' }}>
-              Actual hours logged while each deal was in that stage. Click a stage row to expand deal breakdown. <span style={{ color: '#2d6a4a', fontWeight: 600 }}>→</span> indicates deal advanced to next stage.
-            </div>
-          </div>
-          <TimeInvestedTable stages={activeStages} timeByStage={timeByStage} />
-        </div>
-      )}
-
       {/* ── Time-in-stage histogram ── */}
       {selectedStage && (
         <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
@@ -618,6 +603,21 @@ export default function FunnelAnalysis() {
               </BarChart>
             </ResponsiveContainer>
           )}
+        </div>
+      )}
+
+      {/* ── Time invested per stage ── */}
+      {timeInvestmentRaw.length > 0 && (
+        <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
+          <div className="mb-4">
+            <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+              Time Invested per Stage
+            </div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>
+              Actual hours logged while each deal was in that stage. Click a stage row to expand deal breakdown. <span style={{ color: '#2d6a4a', fontWeight: 600 }}>→</span> indicates deal advanced to next stage.
+            </div>
+          </div>
+          <TimeInvestedTable stages={activeStages} timeByStage={timeByStage} />
         </div>
       )}
     </div>
