@@ -251,8 +251,8 @@ export default function FunnelAnalysis() {
             <tbody>
               {stages.map((s, i) => {
                 const short      = STAGE_SHORT[s.stage_value] ?? s.stage_value
-                const didntAdv   = s.prev_stage_count != null
-                  ? (s.prev_stage_count - (s.reached_stage ?? 0))
+                const didntAdv = i > 0
+                  ? (stages[i - 1].reached_stage ?? 0) - (s.reached_stage ?? 0)
                   : '—'
                 const isSelected = selectedStage === s.stage_value
                 return (
