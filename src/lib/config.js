@@ -1,0 +1,1 @@
+export const PROPRIETARY_DEAL_GOAL = 30

@@ -728,3 +728,152 @@ The project is complete when:
 - [ ] Mobile sidebar collapses correctly (hamburger menu)
 - [ ] Loading states on all data fetches
 - [ ] Error states on all data fetches
+
+
+---
+
+## 14. UX & Product Decisions (Addendum)
+
+### Filtering
+- **Default time window:** LTM (rolling — always last 12 months from today's date, not a fixed anchor)
+- **Multi-select filters:** KAM and Stage filters allow selecting multiple values simultaneously
+- **Default state:** All filters set to "All" on first load. No filter persistence between sessions.
+
+### Display Conventions
+- **Name formatting:** All person names shortened to first name + last initial throughout the app. 
+  Helper function to add to `src/lib/utils.js`:
+```js
+  export function shortName(fullName) {
+    if (!fullName) return '—'
+    const parts = fullName.trim().split(' ')
+    if (parts.length === 1) return parts[0]
+    return `${parts[0]} ${parts[parts.length - 1][0]}.`
+  }
+```
+- **Currency:** Display as `€2,500k` format (multiply €M values × 1000, append "k"). 
+  If value is null/zero display `—`.
+  Helper function:
+```js
+  export function formatCurrency(value) {
+    if (!value || value === 0) return '—'
+    return `€${Math.round(value * 1000).toLocaleString('en-GB')}k`
+  }
+```
+- **Empty states:** When a filter returns no data, show a simple centred message:
+  `"No data for the selected filters"` — no charts, no empty axes, just the message.
+- **Platform:** Desktop only. Sidebar does not need to collapse on mobile. Minimum supported width: 1024px.
+
+### Data Freshness Indicator
+- Show in the top-right of the FilterBar on all reporting pages
+- Query: `SELECT MAX(last_synced_at) FROM "ReportingNz_deals"`
+- Display format: `"Data as of: 19 Mar 2026, 06:02"` 
+- No manual sync button — sync is handled automatically by scheduled edge function (see below)
+
+### Scheduled Sync (replaces manual sync button)
+The `affinity-sync` edge function should run automatically on a daily schedule.
+Set this up in Supabase → SQL Editor after enabling `pg_cron` and `pg_net` extensions:
+```sql
+select cron.schedule(
+  'affinity-daily-sync',
+  '0 6 * * *',
+  $$
+  select net.http_post(
+    url := current_setting('app.supabase_url') || '/functions/v1/affinity-sync',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || current_setting('app.supabase_anon_key'),
+      'Content-Type', 'application/json'
+    ),
+    body := '{}'::jsonb
+  )
+  $$
+);
+```
+
+The frontend only reads `MAX(last_synced_at)` — it never triggers the sync directly.
+
+### Proprietary Dealflow Goal
+- Hardcoded as a constant in `src/lib/config.js`:
+```js
+  export const PROPRIETARY_DEAL_GOAL = 30
+```
+- Easy to update by editing this one file. No UI input needed for now.
+
+### Cost Calculation (Dashboard 1 — Channel Performance)
+
+**Do not use the hardcoded `ReportingNz_channel_costs` recurring cost values for the main cost metric.**
+
+The recurring cost per channel should be calculated dynamically from time entries:
+```
+cost = SUM(time_entries.hrs_actual × team_members.hourly_rate × team_members.seniority_multiplier)
+```
+
+Joined via:
+- `time_entries.user_name = team_members.name`
+- `time_entries.category_key = deals.name`
+- `deals.origination_channel = channel`
+
+Create this view in Supabase before building Dashboard 1:
+```sql
+CREATE OR REPLACE VIEW public."ReportingNz_channel_cost_actuals" AS
+
+SELECT
+  d.origination_channel                                    AS channel,
+  SUM(
+    te.hrs_actual
+    * COALESCE(tm.hourly_rate, 0)
+    * COALESCE(tm.seniority_multiplier, 1)
+  )                                                        AS total_cost_eur,
+  SUM(te.hrs_actual)                                       AS total_hours,
+  COUNT(DISTINCT te.user_name)                             AS team_members_involved,
+  COUNT(DISTINCT te.category_key)                          AS deals_worked
+
+FROM public."ReportingNz_time_entries" te
+
+LEFT JOIN public."ReportingNz_deals" d
+  ON te.category_key = d.name
+
+LEFT JOIN public."ReportingNz_team_members" tm
+  ON te.user_name = tm.name
+
+WHERE
+  te.category_type IN ('deal', 'longtail', 'orig')
+  AND d.origination_channel IS NOT NULL
+  AND te.hrs_actual > 0
+
+GROUP BY d.origination_channel;
+```
+
+**The `one_off_cost` field** from `ReportingNz_channel_costs` IS still used — this represents 
+manual setup/infrastructure costs (e.g. software subscriptions, one-time investments per channel) 
+that cannot be derived from time entries. Display it as a separate column alongside the 
+calculated recurring cost.
+
+**Dashboard 1 cost columns should be:**
+| Column | Source |
+|---|---|
+| One-off Cost | `ReportingNz_channel_costs.one_off_cost` (manual input) |
+| Recurring Cost (actual) | `ReportingNz_channel_cost_actuals.total_cost_eur` (calculated) |
+| Total Hours | `ReportingNz_channel_cost_actuals.total_hours` |
+| Recurring Cost / Quality Lead | `total_cost_eur / quality_leads` (annualised) |
+
+**Note:** This view will show €0 or null for channels until team members have 
+`hourly_rate` and `seniority_multiplier` populated in `ReportingNz_team_members`. 
+Populate those before building Dashboard 1.
+
+### Board Pipeline — Deal Detail Expansion
+When a deal row is clicked/expanded, show:
+- `activity_description` — one-line deal description
+- `team_involved` — team members on the deal  
+- `milestones` — achieved milestones / next steps
+- `deal_captain` — lead person
+- `ic_stage` — IC process stage
+- `date_added` — formatted as "DD Mon YYYY"
+
+Do NOT show financials (revenues, EBITDA) in the expanded row — 
+these are shown inline in the table already.
+
+### Adviser Coverage
+- Same view for all users — no KAM-based auto-filtering on login
+- Default filter: `programme_bucket = 'Adviser Programme'` 
+- Toggle available to include `'Untiered Connection'` bucket
+- `'No Adviser Data'` bucket always visible as a separate row at the bottom of the table
