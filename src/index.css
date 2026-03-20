@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "DM Serif Display", serif;
+  --font-sans: "DM Sans", sans-serif;
+  --font-mono: "DM Mono", monospace;
+}
+
+:root {
+  --ink:          #0f0f0f;
+  --paper:        #f7f5f0;
+  --muted:        #9a9589;
+  --rule:         #e5e2db;
+  --accent:       #1a3a2a;
+  --accent-light: #e8f0eb;
+  --danger:       #c0392b;
+  --portco-bg:    #eef0f8;
+  --portco-fg:    #3a4080;
+  --longtail-bg:  #f5eef8;
+  --longtail-fg:  #6b3a80;
+  --orig-bg:      #fff4e8;
+  --orig-fg:      #8a5020;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}

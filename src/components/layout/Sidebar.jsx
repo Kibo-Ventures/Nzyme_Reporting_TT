@@ -1,0 +1,97 @@
+import { useState } from 'react'
+import { NavLink } from 'react-router-dom'
+
+const navItems = [
+  { to: '/timetracker', label: 'Time Tracker', icon: '⏱', group: null },
+  { to: '/pipeline',    label: 'Board Pipeline',     icon: '📋', group: 'REPORTING' },
+  { to: '/proprietary', label: 'Proprietary',         icon: '🎯', group: 'REPORTING' },
+  { to: '/channels',    label: 'Channels',            icon: '📊', group: 'REPORTING' },
+  { to: '/advisers',    label: 'Adviser Coverage',    icon: '🤝', group: 'REPORTING' },
+  { to: '/funnel',      label: 'Funnel Analysis',     icon: '🔽', group: 'REPORTING' },
+]
+
+export default function Sidebar() {
+  const [open, setOpen] = useState(true)
+
+  const linkClass = ({ isActive }) =>
+    `flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
+      isActive
+        ? 'font-semibold'
+        : 'hover:bg-black/5'
+    }`
+
+  const activeLinkStyle = ({ isActive }) =>
+    isActive
+      ? { background: 'var(--accent-light)', color: 'var(--accent)' }
+      : {}
+
+  return (
+    <>
+      {/* Mobile hamburger */}
+      <button
+        className="fixed top-3 left-3 z-50 md:hidden p-2 rounded"
+        style={{ background: 'var(--rule)' }}
+        onClick={() => setOpen(o => !o)}
+        aria-label="Toggle sidebar"
+      >
+        <span className="block w-5 h-0.5 bg-current mb-1" />
+        <span className="block w-5 h-0.5 bg-current mb-1" />
+        <span className="block w-5 h-0.5 bg-current" />
+      </button>
+
+      {/* Sidebar panel */}
+      <aside
+        className={`
+          flex flex-col w-56 shrink-0 border-r h-full
+          transition-transform duration-200
+          ${open ? 'translate-x-0' : '-translate-x-full'}
+          fixed md:static z-40 md:translate-x-0
+        `}
+        style={{ borderColor: 'var(--rule)', background: 'var(--paper)' }}
+      >
+        {/* Logo */}
+        <div className="px-4 py-4 border-b" style={{ borderColor: 'var(--rule)' }}>
+          <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: 'var(--muted)' }}>
+            PE
+          </span>
+          <div className="font-serif text-base mt-0.5" style={{ fontFamily: 'var(--font-serif)' }}>
+            Kibo Ventures
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+          {navItems.map((item, i) => (
+            <div key={item.to}>
+              {item.group && (i === 0 || navItems[i - 1].group !== item.group) && (
+                <div
+                  className="px-3 pt-4 pb-1 text-xs font-semibold tracking-widest uppercase"
+                  style={{ color: 'var(--muted)' }}
+                >
+                  {item.group}
+                </div>
+              )}
+              <NavLink
+                to={item.to}
+                className={linkClass}
+                style={activeLinkStyle}
+                onClick={() => window.innerWidth < 768 && setOpen(false)}
+              >
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </NavLink>
+            </div>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Mobile backdrop */}
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-black/20 md:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+    </>
+  )
+}
