@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
-  FunnelChart, Funnel, LabelList, Cell,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer,
+  ResponsiveContainer, Cell, LabelList,
 } from 'recharts'
 import {
   useFunnelStages,
@@ -43,7 +42,7 @@ const STAGE_COLORS = [
   '#6b21a8', // Portfolio — purple
 ]
 
-// Colour per stage value (for pivot bar chart)
+// Colour per stage value
 const STAGE_COLOR_MAP = Object.fromEntries(STAGE_ORDER.map((s, i) => [s, STAGE_COLORS[i]]))
 
 // ── Histogram bucketing ──────────────────────────────────────────────────────
@@ -93,11 +92,10 @@ function convColor(pct) {
   return '#c0392b'
 }
 
-// ── Pivot toggle ─────────────────────────────────────────────────────────────
+// ── Filter toggle pills ───────────────────────────────────────────────────────
 
-function PivotToggle({ value, onChange }) {
+function FilterPills({ filterType, onChange }) {
   const options = [
-    { key: null,       label: 'Total' },
     { key: 'captains', label: 'Team Captains' },
     { key: 'channels', label: 'Origination Channels' },
     { key: 'advisers', label: 'Adviser Organisation' },
@@ -106,16 +104,16 @@ function PivotToggle({ value, onChange }) {
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       {options.map(opt => (
         <button
-          key={opt.key ?? 'total'}
-          onClick={() => onChange(opt.key)}
+          key={opt.key}
+          onClick={() => onChange(filterType === opt.key ? null : opt.key)}
           style={{
             padding: '5px 14px',
             fontSize: '0.75rem',
-            fontWeight: value === opt.key ? 600 : 400,
+            fontWeight: filterType === opt.key ? 600 : 400,
             border: '1px solid var(--rule)',
             borderRadius: 6,
-            background: value === opt.key ? 'var(--accent)' : 'white',
-            color: value === opt.key ? 'white' : 'var(--ink)',
+            background: filterType === opt.key ? 'var(--accent)' : 'white',
+            color: filterType === opt.key ? 'white' : 'var(--ink)',
             cursor: 'pointer',
             transition: 'all 0.15s',
           }}
@@ -127,52 +125,6 @@ function PivotToggle({ value, onChange }) {
   )
 }
 
-// ── Build pivot bar data (stages on x-axis, stacked by pivot dimension) ──────
-
-function buildPivotData(deals, adviserDeals, pivotType) {
-  if (pivotType === 'advisers') {
-    // Group adviser deals by attributed_adviser × stage
-    const keys = [...new Set(adviserDeals.map(d => d.attributed_adviser || 'Unknown'))].sort()
-    return {
-      keys,
-      data: STAGE_ORDER
-        .filter(s => adviserDeals.some(d => d.stage === s))
-        .map(s => {
-          const row = { stage: STAGE_SHORT[s] ?? s }
-          keys.forEach(k => { row[k] = 0 })
-          adviserDeals.filter(d => d.stage === s).forEach(d => {
-            const k = d.attributed_adviser || 'Unknown'
-            row[k] = (row[k] || 0) + 1
-          })
-          return row
-        }),
-    }
-  }
-
-  const keyFn = pivotType === 'captains'
-    ? (d) => d.deal_captain || 'Unknown'
-    : (d) => d.origination_channel || 'Unattributed'
-
-  const keys = [...new Set(deals.map(keyFn))].sort()
-  const data = STAGE_ORDER
-    .filter(s => deals.some(d => d.stage === s))
-    .map(s => {
-      const row = { stage: STAGE_SHORT[s] ?? s }
-      keys.forEach(k => { row[k] = 0 })
-      deals.filter(d => d.stage === s).forEach(d => {
-        const k = keyFn(d)
-        row[k] = (row[k] || 0) + 1
-      })
-      return row
-    })
-  return { keys, data }
-}
-
-const PIVOT_COLORS = [
-  '#1a3a2a', '#2e6da4', '#c07830', '#6b21a8', '#3a4080',
-  '#8a5020', '#22c55e', '#6b7280', '#ef4444', '#3b82f6',
-]
-
 // ── Time Invested Table ───────────────────────────────────────────────────────
 
 function TimeInvestedTable({ stages, timeByStage }) {
@@ -183,7 +135,7 @@ function TimeInvestedTable({ stages, timeByStage }) {
       <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ background: '#fafaf8' }}>
-            {['Stage', 'Total Hours', 'Hrs / Deal Reached', 'Deals with Hours'].map((h, i) => (
+            {['Stage', 'Total Hours', 'Avg Hrs to Progress', 'Deals with Hours'].map((h, i) => (
               <th
                 key={h}
                 className="px-3 py-2 text-xs font-semibold uppercase tracking-wide"
@@ -203,8 +155,8 @@ function TimeInvestedTable({ stages, timeByStage }) {
           {stages.map((s, i) => {
             const ti = timeByStage[s.stage_value]
             const totalHrs = ti ? Math.round(ti.total) : 0
-            const hrsPerDeal = ti && s.reached_stage > 0
-              ? (ti.total / s.reached_stage).toFixed(1)
+            const avgHrsProgressing = ti && ti.advancingCount > 0
+              ? (ti.advancing / ti.advancingCount).toFixed(1)
               : null
             const isExpanded = expandedStage === s.stage_value
             const short = STAGE_SHORT[s.stage_value] ?? s.stage_value
@@ -242,7 +194,7 @@ function TimeInvestedTable({ stages, timeByStage }) {
                     {totalHrs > 0 ? `${totalHrs}h` : '—'}
                   </td>
                   <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--muted)' }}>
-                    {hrsPerDeal != null ? `${hrsPerDeal}h` : '—'}
+                    {avgHrsProgressing != null ? `${avgHrsProgressing}h` : '—'}
                   </td>
                   <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--muted)' }}>
                     {ti ? ti.deals.length : '—'}
@@ -254,6 +206,9 @@ function TimeInvestedTable({ stages, timeByStage }) {
                       <div style={{ padding: '8px 16px 4px 40px', display: 'flex', flexWrap: 'wrap', gap: '6px 24px' }}>
                         {ti.deals.map(d => (
                           <div key={d.name} style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 200 }}>
+                            {d.advanced && (
+                              <span style={{ fontSize: '0.7rem', color: '#2d6a4a', fontWeight: 700 }} title="Advanced to next stage">→</span>
+                            )}
                             <span style={{ fontSize: '0.8rem', color: 'var(--ink)', fontWeight: 500 }}>{d.name}</span>
                             <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--muted)' }}>{d.hrs}h</span>
                           </div>
@@ -276,59 +231,114 @@ function TimeInvestedTable({ stages, timeByStage }) {
 export default function FunnelAnalysis() {
   const { data: stages = [], isLoading, error } = useFunnelStages()
   const [selectedStage, setSelectedStage] = useState(null)
-  const [pivot, setPivot] = useState(null)
+  const [filterType, setFilterType] = useState(null)
+  const [filterValue, setFilterValue] = useState(null)
   const { data: histogramRaw = [], isLoading: histLoading } = useStageHistogram(selectedStage)
   const { data: adviserRaw = [] } = useAdviserStageBreakdown()
   const { data: allDeals = [] } = useFunnelDeals()
   const { data: timeInvestmentRaw = [] } = useStageTimeInvestment()
 
+  // Reset filterValue when filterType changes
+  function handleFilterType(type) {
+    setFilterType(type)
+    setFilterValue(null)
+  }
+
+  // ── Filter dropdown options ────────────────────────────────────────────────
+  const filterOptions = useMemo(() => {
+    if (filterType === 'captains') {
+      const vals = new Set()
+      allDeals.forEach(d => {
+        if (d.deal_captain) {
+          d.deal_captain.split(/[,;]/).map(v => v.trim()).filter(Boolean).forEach(v => vals.add(v))
+        }
+      })
+      return [...vals].sort()
+    }
+    if (filterType === 'channels') {
+      return [...new Set(allDeals.map(d => d.origination_channel).filter(Boolean))].sort()
+    }
+    if (filterType === 'advisers') {
+      return [...new Set(adviserRaw.map(d => d.attributed_adviser).filter(Boolean))].sort()
+    }
+    return []
+  }, [filterType, allDeals, adviserRaw])
+
+  // ── Filtered funnel computation ────────────────────────────────────────────
+  const filteredStages = useMemo(() => {
+    if (!filterType || !filterValue) return null
+
+    let deals = allDeals
+    if (filterType === 'captains')
+      deals = allDeals.filter(d => (d.deal_captain || '').includes(filterValue))
+    if (filterType === 'channels')
+      deals = allDeals.filter(d => d.origination_channel === filterValue)
+    if (filterType === 'advisers')
+      deals = adviserRaw.filter(d => d.attributed_adviser === filterValue)
+
+    const total = deals.length
+    return STAGE_ORDER.map((stageVal, idx) => {
+      const reached = deals.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx).length
+      const prevReached = idx === 0 ? null : deals.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx - 1).length
+      return {
+        stage_value: stageVal,
+        stage_rank: idx + 1,
+        reached_stage: reached,
+        avg_days_in_stage: null,
+        cumulative_conversion_pct: total > 0 ? Math.round((reached / total) * 100) : null,
+        stage_to_stage_pct: prevReached > 0 ? Math.round((reached / prevReached) * 100) : null,
+      }
+    }).filter(s => s.reached_stage > 0)
+  }, [filterType, filterValue, allDeals, adviserRaw])
+
+  // Active dataset: filtered when both filterType + filterValue set, else DB view
+  const activeStages = filteredStages ?? stages
+
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
-    if (!stages.length) return {}
-    const entry     = stages[0]?.reached_stage ?? 0
-    const portfolio = stages.find((s) => s.stage_value === 'Portfolio')?.reached_stage ?? 0
+    if (!activeStages.length) return {}
+    const entry     = activeStages[0]?.reached_stage ?? 0
+    const portfolio = activeStages.find((s) => s.stage_value === 'Portfolio')?.reached_stage ?? 0
     const convRate  = entry > 0 ? Math.round((portfolio / entry) * 100) : 0
-    const avgDays   = stages
-      .reduce((sum, s) => sum + (s.avg_days_in_stage ?? 0), 0)
-    return { entry, portfolio, convRate, avgDays: Math.round(avgDays) }
-  }, [stages])
+    // avgDays only from DB view (not available when filtered)
+    const avgDays = filteredStages
+      ? null
+      : stages.reduce((sum, s) => sum + (s.avg_days_in_stage ?? 0), 0)
+    return { entry, portfolio, convRate, avgDays: avgDays != null ? Math.round(avgDays) : null }
+  }, [activeStages, filteredStages, stages])
 
-  // ── Funnel chart data ─────────────────────────────────────────────────────
-  const funnelData = useMemo(
+  // ── Horizontal bar chart data ─────────────────────────────────────────────
+  const barData = useMemo(
     () =>
-      stages.map((s, i) => ({
-        name:   STAGE_SHORT[s.stage_value] ?? s.stage_value,
-        full:   s.stage_value,
-        value:  s.reached_stage ?? 0,
-        fill:   STAGE_COLORS[i] ?? '#9ca3af',
-        rank:   s.stage_rank,
+      activeStages.map((s, i) => ({
+        name:  STAGE_SHORT[s.stage_value] ?? s.stage_value,
+        full:  s.stage_value,
+        value: s.reached_stage ?? 0,
+        fill:  STAGE_COLOR_MAP[s.stage_value] ?? STAGE_COLORS[i] ?? '#9ca3af',
       })),
-    [stages]
+    [activeStages]
   )
 
   // ── Histogram ─────────────────────────────────────────────────────────────
   const histData = useMemo(() => bucketDays(histogramRaw), [histogramRaw])
 
-  // ── Time investment: hours per stage (aggregated) + per-deal drilldown ────
+  // ── Time investment: hours per stage + per-deal drilldown ─────────────────
   const timeByStage = useMemo(() => {
     const map = {}
     timeInvestmentRaw.forEach(r => {
-      if (!map[r.stage_value]) map[r.stage_value] = { total: 0, deals: [] }
+      if (!map[r.stage_value]) map[r.stage_value] = { total: 0, advancing: 0, advancingCount: 0, deals: [] }
       map[r.stage_value].total += r.total_hours || 0
+      if (r.did_advance) {
+        map[r.stage_value].advancing += r.total_hours || 0
+        map[r.stage_value].advancingCount++
+      }
       if (r.total_hours > 0) {
-        map[r.stage_value].deals.push({ name: r.deal_name, hrs: Math.round(r.total_hours) })
+        map[r.stage_value].deals.push({ name: r.deal_name, hrs: Math.round(r.total_hours), advanced: r.did_advance })
       }
     })
-    // Sort deals within each stage by hours desc
     Object.values(map).forEach(s => s.deals.sort((a, b) => b.hrs - a.hrs))
     return map
   }, [timeInvestmentRaw])
-
-  // ── Pivot data ─────────────────────────────────────────────────────────────
-  const pivotResult = useMemo(() => {
-    if (!pivot) return null
-    return buildPivotData(allDeals, adviserRaw, pivot)
-  }, [pivot, allDeals, adviserRaw])
 
   if (isLoading) {
     return (
@@ -385,7 +395,7 @@ export default function FunnelAnalysis() {
         />
       </div>
 
-      {/* ── Funnel chart ── */}
+      {/* ── Bar chart ── */}
       <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
         <div className="mb-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -393,59 +403,73 @@ export default function FunnelAnalysis() {
               Deals Reaching Each Stage
             </div>
             <div className="text-xs" style={{ color: 'var(--muted)' }}>
-              All-time count of deals that reached or passed each stage
+              {filterType && filterValue
+                ? `Filtered: ${filterValue}`
+                : 'All-time count of deals that reached or passed each stage'}
             </div>
           </div>
-          <PivotToggle value={pivot} onChange={setPivot} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+            <FilterPills filterType={filterType} onChange={handleFilterType} />
+            {filterType && (
+              <select
+                value={filterValue ?? ''}
+                onChange={e => setFilterValue(e.target.value || null)}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: '0.75rem',
+                  border: '1px solid var(--rule)',
+                  borderRadius: 6,
+                  background: 'white',
+                  color: filterValue ? 'var(--ink)' : 'var(--muted)',
+                  cursor: 'pointer',
+                  minWidth: 180,
+                }}
+              >
+                <option value="">All {filterType === 'captains' ? 'Captains' : filterType === 'channels' ? 'Channels' : 'Advisers'}</option>
+                {filterOptions.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
 
-        {funnelData.length === 0 ? (
+        {barData.length === 0 ? (
           <div className="text-sm text-center py-8" style={{ color: 'var(--muted)' }}>
             No funnel data available
           </div>
-        ) : pivot && pivotResult ? (
-          // Pivot: grouped bar chart — stages on x-axis, stacked by pivot dimension
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart
-              data={pivotResult.data}
-              margin={{ top: 8, right: 16, bottom: 60, left: 8 }}
-            >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--rule)" />
-              <XAxis
-                dataKey="stage"
-                tick={{ fontSize: 11, fill: 'var(--ink)' }}
-                angle={-30}
-                textAnchor="end"
-                interval={0}
-              />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--muted)' }} />
-              <Tooltip contentStyle={{ fontSize: 12 }} />
-              {pivotResult.keys.slice(0, 10).map((k, i) => (
-                <Bar key={k} dataKey={k} stackId="a" fill={PIVOT_COLORS[i % PIVOT_COLORS.length]} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
         ) : (
-          // Default: FunnelChart
-          <ResponsiveContainer width="100%" height={300}>
-            <FunnelChart>
-              <Tooltip formatter={(v) => [v, 'Deals']} contentStyle={{ fontSize: 12 }} />
-              <Funnel dataKey="value" data={funnelData} isAnimationActive={false}>
-                {funnelData.map((entry, i) => (
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart
+              layout="vertical"
+              data={barData}
+              margin={{ top: 4, right: 48, bottom: 4, left: 130 }}
+            >
+              <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--rule)" />
+              <YAxis
+                dataKey="name"
+                type="category"
+                width={120}
+                tick={{ fontSize: 12, fill: 'var(--ink)' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <XAxis
+                type="number"
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: 'var(--muted)' }}
+              />
+              <Tooltip
+                formatter={(v) => [v, 'Deals']}
+                contentStyle={{ fontSize: 12 }}
+              />
+              <Bar dataKey="value" name="Deals" radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                {barData.map((entry, i) => (
                   <Cell key={i} fill={entry.fill} />
                 ))}
-                <LabelList
-                  dataKey="name"
-                  position="center"
-                  style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', fill: 'white', fontWeight: 600 }}
-                />
-                <LabelList
-                  dataKey="value"
-                  position="right"
-                  style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: 'var(--muted)' }}
-                />
-              </Funnel>
-            </FunnelChart>
+                <LabelList dataKey="value" position="right" style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: 'var(--muted)' }} />
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         )}
       </div>
@@ -464,7 +488,7 @@ export default function FunnelAnalysis() {
           <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--accent-light)' }}>
-                {['Stage', 'Reached', "Didn't Advance", 'Cumul. Conv. %', 'Stage-to-Stage %', 'Avg Days', 'Total Hrs', 'Hrs / Deal'].map((h) => (
+                {['Stage', 'Reached', "Didn't Advance", 'Cumul. Conv. %', 'Stage-to-Stage %', 'Avg Days', 'Total Hrs', 'Avg Hrs to Progress'].map((h) => (
                   <th
                     key={h}
                     className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide"
@@ -476,10 +500,10 @@ export default function FunnelAnalysis() {
               </tr>
             </thead>
             <tbody>
-              {stages.map((s, i) => {
-                const short      = STAGE_SHORT[s.stage_value] ?? s.stage_value
+              {activeStages.map((s, i) => {
+                const short    = STAGE_SHORT[s.stage_value] ?? s.stage_value
                 const didntAdv = i > 0
-                  ? (stages[i - 1].reached_stage ?? 0) - (s.reached_stage ?? 0)
+                  ? (activeStages[i - 1].reached_stage ?? 0) - (s.reached_stage ?? 0)
                   : '—'
                 const isSelected = selectedStage === s.stage_value
                 return (
@@ -496,7 +520,7 @@ export default function FunnelAnalysis() {
                     <td className="px-3 py-2">
                       <span
                         className="inline-block w-2 h-2 rounded-full mr-2"
-                        style={{ background: STAGE_COLORS[i] ?? '#9ca3af' }}
+                        style={{ background: STAGE_COLOR_MAP[s.stage_value] ?? '#9ca3af' }}
                       />
                       <span style={{ color: 'var(--ink)', fontWeight: isSelected ? 600 : 400 }}>
                         {short}
@@ -526,8 +550,8 @@ export default function FunnelAnalysis() {
                     {(() => {
                       const ti = timeByStage[s.stage_value]
                       const totalHrs = ti ? Math.round(ti.total) : null
-                      const hrsPerDeal = ti && s.reached_stage > 0
-                        ? Math.round(ti.total / s.reached_stage)
+                      const avgHrsProgressing = ti && ti.advancingCount > 0
+                        ? Math.round(ti.advancing / ti.advancingCount)
                         : null
                       return (
                         <>
@@ -535,7 +559,7 @@ export default function FunnelAnalysis() {
                             {totalHrs != null ? `${totalHrs}h` : '—'}
                           </td>
                           <td className="px-3 py-2 font-mono" style={{ color: 'var(--muted)' }}>
-                            {hrsPerDeal != null ? `${hrsPerDeal}h` : '—'}
+                            {avgHrsProgressing != null ? `${avgHrsProgressing}h` : '—'}
                           </td>
                         </>
                       )
@@ -556,10 +580,10 @@ export default function FunnelAnalysis() {
               Time Invested per Stage
             </div>
             <div className="text-xs" style={{ color: 'var(--muted)' }}>
-              Actual hours logged while each deal was in that stage. Click a stage row to expand deal breakdown.
+              Actual hours logged while each deal was in that stage. Click a stage row to expand deal breakdown. <span style={{ color: '#2d6a4a', fontWeight: 600 }}>→</span> indicates deal advanced to next stage.
             </div>
           </div>
-          <TimeInvestedTable stages={stages} timeByStage={timeByStage} />
+          <TimeInvestedTable stages={activeStages} timeByStage={timeByStage} />
         </div>
       )}
 

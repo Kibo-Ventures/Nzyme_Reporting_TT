@@ -59,7 +59,7 @@ export function useStageTimeInvestment() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ReportingNz_stage_time_investment')
-        .select('deal_name, stage_value, total_hours')
+        .select('deal_name, stage_value, total_hours, did_advance')
       if (error) throw error
       return data || []
     },
