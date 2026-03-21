@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   LabelList, ResponsiveContainer, Cell,
 } from 'recharts'
-import { useChannelDeals, useChannelCosts, useChannelCostActuals } from '../hooks/useChannelPerformance'
+import { useChannelDeals, useChannelCosts, useChannelCostActuals, useChannelOrigEntries } from '../hooks/useChannelPerformance'
 import KpiCard from '../components/ui/KpiCard'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 
@@ -79,11 +79,11 @@ const COLS = [
   { key: 'quality',           label: 'Quality Leads',            align: 'right' },
   { key: 'qualityRate',       label: '% Quality',                align: 'right' },
   { key: 'avgPriority',       label: 'Avg Priority',             align: 'right' },
-  { key: 'nboCount',          label: 'NBO / LOI',                align: 'right' },
-  { key: 'costPerNbo',        label: 'Cost / NBO/LOI',           align: 'right' },
-  { key: 'oneOffCost',        label: 'One-off Cost',             align: 'right' },
-  { key: 'recurringCost',     label: 'Recurring Cost (actual)',  align: 'right' },
+  { key: 'nboCount',          label: 'NBOs',                     align: 'right' },
+  { key: 'costPerNbo',        label: 'Cost / NBO',               align: 'right' },
+  { key: 'avgCostPerMonth',   label: 'Avg Cost / Month',         align: 'right' },
   { key: 'totalHours',        label: 'Total Hours',              align: 'right' },
+  { key: 'dealHours',         label: 'Time Invested in Deals',   align: 'right' },
   { key: 'costPerQualityLead',label: 'Cost / Quality Lead',      align: 'right' },
   { key: 'difficulty',        label: 'Difficulty',               align: 'center' },
   { key: 'potential',         label: 'Potential',                align: 'center' },
@@ -166,13 +166,13 @@ function ChannelTable({ rows }) {
                 {formatEur(row.costPerNbo)}
               </td>
               <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
-                {formatEur(row.oneOffCost)}
-              </td>
-              <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
-                {formatEur(row.recurringCost)}
+                {formatEur(row.avgCostPerMonth)}
               </td>
               <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
                 {row.totalHours != null && row.totalHours > 0 ? `${Math.round(row.totalHours)}h` : '—'}
+              </td>
+              <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
+                {row.dealHours != null && row.dealHours > 0 ? `${Math.round(row.dealHours)}h` : '—'}
               </td>
               <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
                 {formatEur(row.costPerQualityLead)}
@@ -275,9 +275,10 @@ function MemoList({ deals }) {
 export default function ChannelPerformance() {
   const [chartPivot, setChartPivot] = useState('volume')
 
-  const dealsQ   = useChannelDeals()
-  const costsQ   = useChannelCosts()
-  const actualsQ = useChannelCostActuals()
+  const dealsQ    = useChannelDeals()
+  const costsQ    = useChannelCosts()
+  const actualsQ  = useChannelCostActuals()
+  const origQ     = useChannelOrigEntries()
 
   const isLoading = dealsQ.isLoading
   const error     = dealsQ.error
@@ -285,12 +286,24 @@ export default function ChannelPerformance() {
   const deals   = dealsQ.data   ?? []
   const costs   = costsQ.data   ?? []
   const actuals = actualsQ.data ?? []
+  const origEntries = origQ.data ?? []
 
   // ── Build per-channel rows ─────────────────────────────────────────────────
   const tableRows = useMemo(() => {
     // Index costs and actuals by channel name
     const costsMap   = Object.fromEntries(costs.map(c => [c.channel_name, c]))
     const actualsMap = Object.fromEntries(actuals.map(a => [a.channel, a]))
+
+    // Aggregate orig time entries per channel: total hours + distinct calendar months
+    const origHoursMap   = {}
+    const origMonthsMap  = {}
+    origEntries.forEach(e => {
+      const ch = e.category_key
+      if (!ch) return
+      origHoursMap[ch] = (origHoursMap[ch] ?? 0) + (e.hrs_actual ?? 0)
+      if (!origMonthsMap[ch]) origMonthsMap[ch] = new Set()
+      if (e.week_start) origMonthsMap[ch].add(e.week_start.slice(0, 7)) // YYYY-MM
+    })
 
     // Aggregate deals per channel (null channel → 'Unattributed')
     const acc = {}
@@ -309,11 +322,15 @@ export default function ChannelPerformance() {
     return Object.values(acc).map(row => {
       const cost    = costsMap[row.channel]   ?? {}
       const actual  = actualsMap[row.channel] ?? {}
-      const recurring = actual.total_cost_eur ?? null
-      const qualityRate = row.leads > 0 ? Math.round((row.quality / row.leads) * 100) : 0
-      const avgPriority = row.scoreCount > 0 ? row.scoreSum / row.scoreCount : null
-      const costPerQL   = recurring && row.quality > 0 ? recurring / row.quality : null
-      const costPerNbo  = recurring && row.nboCount > 0 ? recurring / row.nboCount : null
+      const totalCostEur  = actual.total_cost_eur ?? null
+      const qualityRate   = row.leads > 0 ? Math.round((row.quality / row.leads) * 100) : 0
+      const avgPriority   = row.scoreCount > 0 ? row.scoreSum / row.scoreCount : null
+      const costPerQL     = totalCostEur && row.quality > 0 ? totalCostEur / row.quality : null
+      const costPerNbo    = totalCostEur && row.nboCount > 0 ? totalCostEur / row.nboCount : null
+
+      // Avg cost / month: total EUR cost ÷ distinct calendar months with orig entries
+      const monthCount    = origMonthsMap[row.channel]?.size ?? 0
+      const avgCostPerMonth = totalCostEur && monthCount > 0 ? totalCostEur / monthCount : null
 
       return {
         channel:            row.channel,
@@ -323,15 +340,15 @@ export default function ChannelPerformance() {
         avgPriority,
         nboCount:           row.nboCount,
         costPerNbo,
-        oneOffCost:         cost.one_off_cost ?? null,
-        recurringCost:      recurring,
-        totalHours:         actual.total_hours ?? null,
+        avgCostPerMonth,
+        totalHours:         origHoursMap[row.channel] > 0 ? origHoursMap[row.channel] : null,
+        dealHours:          actual.total_hours ?? null,
         costPerQualityLead: costPerQL,
         difficulty:         cost.difficulty ?? null,
         potential:          cost.potential  ?? null,
       }
     })
-  }, [deals, costs, actuals])
+  }, [deals, costs, actuals, origEntries])
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -451,7 +468,7 @@ export default function ChannelPerformance() {
           <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '20px 24px', marginBottom: 24 }}>
             <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', marginBottom: 4 }}>Channel Breakdown</h3>
             <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: 16 }}>
-              Click column headers to sort. Recurring cost sourced from actual time entries × hourly rates.
+              Click column headers to sort. Total Hours = time logged directly to the channel; Time Invested in Deals = hours on deals attributed to the channel. Avg Cost / Month = total cost ÷ months with logged activity.
             </p>
             <ChannelTable rows={tableRows} />
           </div>

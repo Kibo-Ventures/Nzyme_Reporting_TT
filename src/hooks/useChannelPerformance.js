@@ -59,3 +59,19 @@ export function useChannelCostActuals() {
     staleTime: 5 * 60 * 1000,
   })
 }
+
+// Time entries logged directly to origination channels (category_type = 'orig').
+export function useChannelOrigEntries() {
+  return useQuery({
+    queryKey: ['channel-orig-entries'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ReportingNz_time_entries')
+        .select('category_key, week_start, hrs_actual')
+        .eq('category_type', 'orig')
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
