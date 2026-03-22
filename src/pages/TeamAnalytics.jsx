@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react'
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   ReferenceLine, ResponsiveContainer, LabelList,
+  PieChart, Pie, Legend,
 } from 'recharts'
 import { shortName } from '../lib/utils'
 import { useDealStageMap, useTimeframeEntries, useLifetimeHoursEntries } from '../hooks/useTeamAnalytics'
+import { useStageTimeInvestment } from '../hooks/useFunnelAnalysis'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -15,6 +17,15 @@ const STAGE_COLORS = {
   'DD Phase':        '#1a3a2a',
   'Working on Deal': '#2e6da4',
   'Under Analysis':  '#c07830',
+}
+
+const PIE_STAGE_COLORS = {
+  'DD Phase':        '#1a3a2a',
+  'Working on Deal': '#2e6da4',
+  'Under Analysis':  '#c07830',
+  'Being Explored':  '#6b3a80',
+  'Portfolio':       '#3a4080',
+  'Other':           '#9a9589',
 }
 
 const CAT_COLORS = {
@@ -160,9 +171,29 @@ function buildLifetimeMatrix(entries, stageMap, stageFilters) {
   return { users, dealsMap, sortedDeals, userTotals, grandTotal }
 }
 
+function buildStageInvestmentData(entries) {
+  const acc = {}
+  entries.forEach(({ stage_value, total_hours }) => {
+    const s = stage_value?.toLowerCase() ?? ''
+    const label =
+      s.includes('dd') ? 'DD Phase' :
+      s.includes('analysis') || s.includes('analys') ? 'Under Analysis' :
+      s.includes('working') ? 'Working on Deal' :
+      s.includes('explo') ? 'Being Explored' :
+      s.includes('portfolio') ? 'Portfolio' :
+      'Other'
+    acc[label] = (acc[label] || 0) + (total_hours || 0)
+  })
+  const total = Object.values(acc).reduce((s, v) => s + v, 0) || 1
+  return Object.entries(acc)
+    .map(([name, hrs]) => ({ name, hrs: Math.round(hrs), pct: parseFloat(((hrs / total) * 100).toFixed(1)) }))
+    .filter(d => d.hrs > 0)
+    .sort((a, b) => b.hrs - a.hrs)
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function ChartCard({ title, description, children }) {
+function ChartCard({ title, description, children, style = {} }) {
   return (
     <div
       style={{
@@ -171,6 +202,7 @@ function ChartCard({ title, description, children }) {
         borderRadius: 8,
         padding: '24px 24px 20px',
         marginBottom: 28,
+        ...style,
       }}
     >
       <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', marginBottom: 2 }}>
@@ -261,10 +293,10 @@ function StageFilterPills({ filters, onChange }) {
   )
 }
 
-function Accordion({ summary, children }) {
+function Accordion({ summary, children, noSeparator = false }) {
   const [open, setOpen] = useState(false)
   return (
-    <div style={{ marginTop: 24, borderTop: '1px solid var(--rule)', paddingTop: 16 }}>
+    <div style={noSeparator ? {} : { marginTop: 24, borderTop: '1px solid var(--rule)', paddingTop: 16 }}>
       <button
         onClick={() => setOpen(v => !v)}
         style={{
@@ -482,14 +514,17 @@ export default function TeamAnalytics() {
   const stageMapQ = useDealStageMap()
   const tfEntriesQ = useTimeframeEntries(timeframe)
   const lifetimeQ = useLifetimeHoursEntries()
+  const stageInvestQ = useStageTimeInvestment()
 
   const stageMap = stageMapQ.data ?? {}
   const tfEntries = tfEntriesQ.data ?? []
   const lifetimeEntries = lifetimeQ.data ?? []
+  const stageInvestEntries = stageInvestQ.data ?? []
 
-  const capacityData = useMemo(() => buildCapacityData(tfEntries, timeframe), [tfEntries, timeframe])
-  const fteData      = useMemo(() => buildFteData(tfEntries, timeframe, stageMap, fteFilters), [tfEntries, timeframe, stageMap, fteFilters])
-  const lifetimeData = useMemo(() => buildLifetimeData(lifetimeEntries, stageMap, lifetimeFilters), [lifetimeEntries, stageMap, lifetimeFilters])
+  const capacityData   = useMemo(() => buildCapacityData(tfEntries, timeframe), [tfEntries, timeframe])
+  const fteData        = useMemo(() => buildFteData(tfEntries, timeframe, stageMap, fteFilters), [tfEntries, timeframe, stageMap, fteFilters])
+  const lifetimeData   = useMemo(() => buildLifetimeData(lifetimeEntries, stageMap, lifetimeFilters), [lifetimeEntries, stageMap, lifetimeFilters])
+  const stageInvestData = useMemo(() => buildStageInvestmentData(stageInvestEntries), [stageInvestEntries])
 
   const timeLabel = timeframe === 'week'
     ? `Week starting ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
@@ -531,78 +566,74 @@ export default function TeamAnalytics() {
 
       {!isLoading && (
         <>
-          {/* ── Team Capacity ── */}
-          <ChartCard
-            title={timeframe === 'week' ? 'Team Capacity — This Week' : 'Average Team Capacity — This Month'}
-            description="Expected % committed by category per team member."
-          >
-            {capacityData.length === 0 ? (
-              <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
-                No entries logged for this timeframe.
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={capHeight}>
-                <BarChart data={capacityData} margin={{ top: 24, right: 20, bottom: 60, left: 10 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e2db" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
-                    axisLine={false}
-                    tickLine={false}
-                    angle={-30}
-                    textAnchor="end"
-                    interval={0}
-                  />
-                  <YAxis
-                    domain={[0, 130]}
-                    ticks={[0, 25, 50, 75, 100, 125]}
-                    tickFormatter={v => `${v}%`}
-                    tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={36}
-                  />
-                  <ReferenceLine y={100} stroke="#c0392b" strokeDasharray="5 4" strokeWidth={1.5} />
-                  <Tooltip
-                    formatter={(value, name) => [`${Math.round(value)}%`, CAT_LABELS[name] ?? name]}
-                    labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600, marginBottom: 4 }}
-                    contentStyle={{ fontSize: 12 }}
-                  />
-                  <Bar dataKey="dealflow" stackId="a" fill={CAT_COLORS.dealflow} radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="internal" stackId="a" fill={CAT_COLORS.internal} />
-                  <Bar dataKey="portco"   stackId="a" fill={CAT_COLORS.portco} />
-                  <Bar dataKey="orig"     stackId="a" fill={CAT_COLORS.orig} />
-                  {/* Zero-height cap bar to render total label at top of stack */}
-                  <Bar dataKey="_zero" stackId="a" fill="transparent" stroke="none" isAnimationActive={false}>
-                    <LabelList dataKey="total" position="top" content={CapacityTopLabel} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+          {/* ── Row 1: Capacity + FTE side-by-side ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 0 }}>
+            <ChartCard
+              style={{ marginBottom: 0 }}
+              title={timeframe === 'week' ? 'Team Capacity — This Week' : 'Average Team Capacity — This Month'}
+              description="Expected % committed by category per team member."
+            >
+              {capacityData.length === 0 ? (
+                <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
+                  No entries logged for this timeframe.
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={capHeight}>
+                  <BarChart data={capacityData} margin={{ top: 24, right: 20, bottom: 60, left: 10 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
+                      axisLine={false}
+                      tickLine={false}
+                      angle={-30}
+                      textAnchor="end"
+                      interval={0}
+                    />
+                    <YAxis
+                      domain={[0, 130]}
+                      ticks={[0, 25, 50, 75, 100, 125]}
+                      tickFormatter={v => `${v}%`}
+                      tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={36}
+                    />
+                    <ReferenceLine y={100} stroke="#c0392b" strokeDasharray="5 4" strokeWidth={1.5} />
+                    <Tooltip
+                      formatter={(value, name) => [`${Math.round(value)}%`, CAT_LABELS[name] ?? name]}
+                      labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600, marginBottom: 4 }}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <Bar dataKey="dealflow" stackId="a" fill={CAT_COLORS.dealflow} radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="internal" stackId="a" fill={CAT_COLORS.internal} />
+                    <Bar dataKey="portco"   stackId="a" fill={CAT_COLORS.portco} />
+                    <Bar dataKey="orig"     stackId="a" fill={CAT_COLORS.orig} />
+                    <Bar dataKey="_zero" stackId="a" fill="transparent" stroke="none" isAnimationActive={false}>
+                      <LabelList dataKey="total" position="top" content={CapacityTopLabel} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
 
-            {/* Legend */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 12 }}>
-              {Object.entries(CAT_LABELS).map(([key, label]) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.71875rem', color: 'var(--muted)' }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: CAT_COLORS[key], display: 'inline-block' }} />
-                  {label}
+              {/* Legend */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 12 }}>
+                {Object.entries(CAT_LABELS).map(([key, label]) => (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.71875rem', color: 'var(--muted)' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 2, background: CAT_COLORS[key], display: 'inline-block' }} />
+                    {label}
+                  </div>
+                ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.71875rem', color: 'var(--muted)' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(116,180,155,0.2)', border: '1.5px dashed #74b49b', display: 'inline-block' }} />
+                  Free
                 </div>
-              ))}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.71875rem', color: 'var(--muted)' }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(116,180,155,0.2)', border: '1.5px dashed #74b49b', display: 'inline-block' }} />
-                Free
               </div>
-            </div>
+            </ChartCard>
 
-            <Accordion summary="Breakdown Team Capacity (Matrix View)">
-              <CapacityMatrix entries={tfEntries} timeframe={timeframe} />
-            </Accordion>
-          </ChartCard>
-
-          {/* ── FTE + Lifetime side-by-side ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28 }}>
             {/* Deal Workload FTE */}
             <ChartCard
+              style={{ marginBottom: 0 }}
               title={timeframe === 'week' ? 'Deal Workload (FTE) — This Week' : 'Avg Deal Workload (FTE) — This Month'}
               description="Total FTE dedicated to active deals. Click a stage to filter."
             >
@@ -650,66 +681,108 @@ export default function TeamAnalytics() {
                 </ResponsiveContainer>
               )}
             </ChartCard>
-
-            {/* Lifetime Hours by Deal */}
-            <ChartCard
-              title="Lifetime Hours by Deal"
-              description="Cumulative actual hours invested across all tracked deals. Click a stage to filter."
-            >
-              <StageFilterPills filters={lifetimeFilters} onChange={setLifetimeFilters} />
-              {lifetimeQ.isLoading ? (
-                <LoadingSpinner />
-              ) : lifetimeData.length === 0 ? (
-                <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
-                  No matching hours logged.
-                </p>
-              ) : (
-                <ResponsiveContainer width="100%" height={lifeHeight}>
-                  <BarChart data={lifetimeData} layout="vertical" margin={{ top: 4, right: 60, bottom: 16, left: 8 }}>
-                    <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
-                    <XAxis
-                      type="number"
-                      tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      width={160}
-                      tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      formatter={(value) => [`${value} hrs`, 'Actual hours']}
-                      labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}
-                      contentStyle={{ fontSize: 12 }}
-                    />
-                    <Bar dataKey="hrs" radius={[0, 4, 4, 0]}>
-                      {lifetimeData.map((entry, i) => (
-                        <Cell key={i} fill={STAGE_COLORS[entry.stage] ?? '#2d6a4a'} />
-                      ))}
-                      <LabelList
-                        dataKey="hrs"
-                        position="right"
-                        formatter={v => `${v}h`}
-                        style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-
-              <Accordion summary="Breakdown Lifetime Hours (Matrix View)">
-                <LifetimeMatrix
-                  entries={lifetimeEntries}
-                  stageMap={stageMap}
-                  stageFilters={lifetimeFilters}
-                />
-              </Accordion>
-            </ChartCard>
           </div>
+
+          {/* ── Row 2: Full-width Breakdown Team Capacity accordion ── */}
+          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '16px 24px 20px', marginBottom: 28, marginTop: 0, borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
+            <Accordion summary="Breakdown Team Capacity (Matrix View)" noSeparator>
+              <CapacityMatrix entries={tfEntries} timeframe={timeframe} />
+            </Accordion>
+          </div>
+
+          {/* ── Row 3: Full-width Lifetime Hours by Deal ── */}
+          <ChartCard
+            title="Lifetime Hours by Deal"
+            description="Cumulative actual hours invested across all tracked deals. Click a stage to filter."
+          >
+            <StageFilterPills filters={lifetimeFilters} onChange={setLifetimeFilters} />
+            {lifetimeQ.isLoading ? (
+              <LoadingSpinner />
+            ) : lifetimeData.length === 0 ? (
+              <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
+                No matching hours logged.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={lifeHeight}>
+                <BarChart data={lifetimeData} layout="vertical" margin={{ top: 4, right: 60, bottom: 16, left: 8 }}>
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    width={160}
+                    tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value) => [`${value} hrs`, 'Actual hours']}
+                    labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}
+                    contentStyle={{ fontSize: 12 }}
+                  />
+                  <Bar dataKey="hrs" radius={[0, 4, 4, 0]}>
+                    {lifetimeData.map((entry, i) => (
+                      <Cell key={i} fill={STAGE_COLORS[entry.stage] ?? '#2d6a4a'} />
+                    ))}
+                    <LabelList
+                      dataKey="hrs"
+                      position="right"
+                      formatter={v => `${v}h`}
+                      style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+
+            <Accordion summary="Breakdown Lifetime Hours (Matrix View)">
+              <LifetimeMatrix
+                entries={lifetimeEntries}
+                stageMap={stageMap}
+                stageFilters={lifetimeFilters}
+              />
+            </Accordion>
+          </ChartCard>
+
+          {/* ── Row 4: Lifetime Hours by Stage (pie) ── */}
+          <ChartCard
+            title="Lifetime Hours by Stage"
+            description="Share of all tracked deal hours invested at each stage."
+          >
+            {stageInvestQ.isLoading ? (
+              <LoadingSpinner />
+            ) : stageInvestData.length === 0 ? (
+              <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>No stage investment data found.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <PieChart>
+                  <Pie
+                    data={stageInvestData}
+                    dataKey="hrs"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={120}
+                    innerRadius={60}
+                    paddingAngle={2}
+                    label={({ name, pct }) => `${name} ${pct}%`}
+                    labelLine
+                  >
+                    {stageInvestData.map((entry, i) => (
+                      <Cell key={i} fill={PIE_STAGE_COLORS[entry.name] ?? '#9a9589'} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value} hrs`, 'Hours']} contentStyle={{ fontSize: 12 }} />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '0.75rem', fontFamily: 'DM Sans, sans-serif' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
         </>
       )}
     </div>
