@@ -33,10 +33,15 @@ const COL = {
   name:        { flex: '1 1 160px', minWidth: 140 },
   captain:     { width: 96,  flexShrink: 0 },
   description: { flex: '1.6 1 120px', minWidth: 100 },
-  revenues:    { width: 72,  flexShrink: 0, textAlign: 'right' },
-  ebitda:      { width: 72,  flexShrink: 0, textAlign: 'right' },
   icStage:     { width: 108, flexShrink: 0 },
-  nextSteps:   { flex: '1 1 100px', minWidth: 80 },
+  milestone:   { width: 120, flexShrink: 0 },
+}
+
+const MILESTONE_ORDER = ['NDA Signed', 'NBO Sent', 'IM Received']
+
+function lastMilestone(milestones) {
+  if (!milestones) return null
+  return MILESTONE_ORDER.find(m => milestones.includes(m)) ?? null
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -165,24 +170,14 @@ function DealRow({ deal, expanded, onToggle }) {
           {deal.activity_description || '—'}
         </div>
 
-        {/* Revenue */}
-        <div style={{ ...COL.revenues, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-          {deal.revenues || '—'}
-        </div>
-
-        {/* EBITDA */}
-        <div style={{ ...COL.ebitda, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-          {deal.ebitda || '—'}
-        </div>
-
         {/* IC Stage */}
         <div style={{ ...COL.icStage, fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {deal.ic_stage || '—'}
         </div>
 
-        {/* Achieved Milestones */}
-        <div style={{ ...COL.nextSteps, fontSize: '0.8rem', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {deal.milestones || '—'}
+        {/* Last Milestone */}
+        <div style={{ ...COL.milestone, fontSize: '0.8rem', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {lastMilestone(deal.milestones) || '—'}
         </div>
       </div>
 
@@ -272,10 +267,8 @@ function ColumnHeaders() {
     { label: 'Deal', style: COL.name },
     { label: 'Captain', style: COL.captain },
     { label: 'Description', style: COL.description },
-    { label: 'Rev.', style: COL.revenues },
-    { label: 'EBITDA', style: COL.ebitda },
     { label: 'IC Stage', style: COL.icStage },
-    { label: 'Achieved Milestones', style: COL.nextSteps },
+    { label: 'Last Milestone', style: COL.milestone },
   ]
   return (
     <div
