@@ -16,8 +16,7 @@ export function useProprietaryDeals() {
         .select(
           'name, stage, deal_captain, origination_channel, attractiveness, attractiveness_score, is_quality_lead, date_added, is_active'
         )
-        .not('origination_channel', 'ilike', '%Network%')
-        .not('origination_channel', 'ilike', '%Adviser%')
+        .or('origination_channel.is.null,and(origination_channel.not.ilike.*Network*,origination_channel.not.ilike.*Adviser*)')
         .order('date_added', { ascending: false })
 
       query = applyDateRange(query, { dateRange, dateFrom, dateTo })
