@@ -202,13 +202,15 @@ function ChartCard({ title, description, children, style = {} }) {
         borderRadius: 8,
         padding: '24px 24px 20px',
         marginBottom: 28,
+        overflow: 'hidden',
+        minWidth: 0,
         ...style,
       }}
     >
-      <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', marginBottom: 2 }}>
+      <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', fontWeight: 600, marginBottom: 2 }}>
         {title}
       </h3>
-      <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: 20 }}>
+      <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginBottom: 20 }}>
         {description}
       </p>
       {children}
@@ -317,13 +319,13 @@ function Accordion({ summary, children, noSeparator = false }) {
         </span>
         {summary}
       </button>
-      {open && <div style={{ marginTop: 16 }}>{children}</div>}
+      {open && <div style={{ marginTop: 16, minWidth: 0, overflow: 'hidden' }}>{children}</div>}
     </div>
   )
 }
 
 const TABLE_STYLES = {
-  wrapper: { overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 4 },
+  wrapper: { overflowX: 'auto', maxWidth: '100%', border: '1px solid var(--rule)', borderRadius: 4 },
   table: { width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: 11, background: 'white' },
 }
 
@@ -532,15 +534,15 @@ export default function TeamAnalytics() {
 
   const isLoading = stageMapQ.isLoading || tfEntriesQ.isLoading
 
-  // Capacity: fixed compact height — vertical bars don't need to be tall at full width
-  const capHeight = 220
-  // FTE / Lifetime: scale with data, 24 px per row
-  const fteRowH = 24
-  const fteHeight = Math.max(120, 44 + fteData.length * fteRowH)
-  const lifeHeight = Math.max(120, 44 + lifetimeData.length * fteRowH)
+  // Capacity: fixed — at half-width vertical bars stay readable
+  const capHeight = 260
+  // FTE: scale with data; min 260 so it aligns with capacity card height
+  const fteHeight = Math.max(260, 44 + fteData.length * 26)
+  // Lifetime: slightly taller bars (28 px) so long deal names stay readable
+  const lifeHeight = Math.max(140, 44 + lifetimeData.length * 28)
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+    <div style={{ maxWidth: 1200, width: '100%', margin: '0 auto', padding: '2rem 1.5rem 4rem', boxSizing: 'border-box' }}>
       {/* Header */}
       <div
         style={{
@@ -565,124 +567,130 @@ export default function TeamAnalytics() {
 
       {!isLoading && (
         <>
-          {/* ── 1. Team Capacity — full width, fixed compact height ── */}
-          <ChartCard
-            title={timeframe === 'week' ? 'Team Capacity — This Week' : 'Average Team Capacity — This Month'}
-            description="Expected % committed by category per team member."
-          >
-            {capacityData.length === 0 ? (
-              <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
-                No entries logged for this timeframe.
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={capHeight}>
-                <BarChart data={capacityData} margin={{ top: 20, right: 20, bottom: 50, left: 10 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e2db" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
-                    axisLine={false}
-                    tickLine={false}
-                    angle={-25}
-                    textAnchor="end"
-                    interval={0}
-                  />
-                  <YAxis
-                    domain={[0, 130]}
-                    ticks={[0, 25, 50, 75, 100, 125]}
-                    tickFormatter={v => `${v}%`}
-                    tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={36}
-                  />
-                  <ReferenceLine y={100} stroke="#c0392b" strokeDasharray="5 4" strokeWidth={1.5} />
-                  <Tooltip
-                    formatter={(value, name) => [`${Math.round(value)}%`, CAT_LABELS[name] ?? name]}
-                    labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600, marginBottom: 4 }}
-                    contentStyle={{ fontSize: 12 }}
-                  />
-                  <Bar dataKey="dealflow" stackId="a" fill={CAT_COLORS.dealflow} />
-                  <Bar dataKey="internal" stackId="a" fill={CAT_COLORS.internal} />
-                  <Bar dataKey="portco"   stackId="a" fill={CAT_COLORS.portco} />
-                  <Bar dataKey="orig"     stackId="a" fill={CAT_COLORS.orig} />
-                  <Bar dataKey="_zero" stackId="a" fill="transparent" stroke="none" isAnimationActive={false}>
-                    <LabelList dataKey="total" position="top" content={CapacityTopLabel} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 10 }}>
-              {Object.entries(CAT_LABELS).map(([key, label]) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.71875rem', color: 'var(--muted)' }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: CAT_COLORS[key], display: 'inline-block' }} />
-                  {label}
-                </div>
-              ))}
-            </div>
-          </ChartCard>
+          {/* ── Row 1: two-column grid — Capacity (left) + FTE (right) ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28, alignItems: 'start' }}>
 
-          {/* ── 2. Deal Workload FTE — full width ── */}
-          <ChartCard
-            title={timeframe === 'week' ? 'Deal Workload (FTE) — This Week' : 'Avg Deal Workload (FTE) — This Month'}
-            description="Total FTE dedicated to active deals. Click a stage to filter."
-          >
-            <StageFilterPills filters={fteFilters} onChange={setFteFilters} />
-            {fteData.length === 0 ? (
-              <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
-                No matching deal flow found.
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={fteHeight}>
-                <BarChart data={fteData} layout="vertical" margin={{ top: 4, right: 64, bottom: 8, left: 8 }}>
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
-                  <XAxis
-                    type="number"
-                    tickFormatter={v => `${v} FTE`}
-                    tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    width={180}
-                    tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    formatter={(value) => [`${value} FTE`, 'Workload']}
-                    labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}
-                    contentStyle={{ fontSize: 12 }}
-                  />
-                  <Bar dataKey="fte" radius={[0, 4, 4, 0]}>
-                    {fteData.map((entry, i) => (
-                      <Cell key={i} fill={STAGE_COLORS[entry.stage] ?? '#2d6a4a'} />
-                    ))}
-                    <LabelList
-                      dataKey="fte"
-                      position="right"
-                      formatter={v => v.toFixed(2)}
-                      style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
+            {/* Left: Team Capacity stacked bar */}
+            <ChartCard
+              style={{ marginBottom: 0 }}
+              title={timeframe === 'week' ? 'Team Capacity — This Week' : 'Average Team Capacity — This Month'}
+              description="Expected % committed by category per team member."
+            >
+              {capacityData.length === 0 ? (
+                <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
+                  No entries logged for this timeframe.
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={capHeight}>
+                  <BarChart data={capacityData} margin={{ top: 20, right: 16, bottom: 52, left: 10 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
+                      axisLine={false}
+                      tickLine={false}
+                      angle={-25}
+                      textAnchor="end"
+                      interval={0}
                     />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
+                    <YAxis
+                      domain={[0, 130]}
+                      ticks={[0, 25, 50, 75, 100, 125]}
+                      tickFormatter={v => `${v}%`}
+                      tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={36}
+                    />
+                    <ReferenceLine y={100} stroke="#c0392b" strokeDasharray="5 4" strokeWidth={1.5} />
+                    <Tooltip
+                      formatter={(value, name) => [`${Math.round(value)}%`, CAT_LABELS[name] ?? name]}
+                      labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600, marginBottom: 4 }}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <Bar dataKey="dealflow" stackId="a" fill={CAT_COLORS.dealflow} />
+                    <Bar dataKey="internal" stackId="a" fill={CAT_COLORS.internal} />
+                    <Bar dataKey="portco"   stackId="a" fill={CAT_COLORS.portco} />
+                    <Bar dataKey="orig"     stackId="a" fill={CAT_COLORS.orig} />
+                    <Bar dataKey="_zero" stackId="a" fill="transparent" stroke="none" isAnimationActive={false}>
+                      <LabelList dataKey="total" position="top" content={CapacityTopLabel} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 12 }}>
+                {Object.entries(CAT_LABELS).map(([key, label]) => (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.6875rem', color: 'var(--muted)' }}>
+                    <span style={{ width: 9, height: 9, borderRadius: 2, background: CAT_COLORS[key], flexShrink: 0, display: 'inline-block' }} />
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </ChartCard>
 
-          {/* ── 3. Breakdown Team Capacity — standalone accordion card ── */}
-          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '16px 24px 20px', marginBottom: 28 }}>
+            {/* Right: Deal Workload FTE — tinted background to visually differentiate */}
+            <ChartCard
+              style={{ marginBottom: 0, background: '#f7f5f0' }}
+              title={timeframe === 'week' ? 'Deal Workload (FTE) — This Week' : 'Avg Deal Workload (FTE) — This Month'}
+              description="Total FTE per active deal. Click a stage to filter."
+            >
+              <StageFilterPills filters={fteFilters} onChange={setFteFilters} />
+              {fteData.length === 0 ? (
+                <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
+                  No matching deal flow found.
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={fteHeight}>
+                  <BarChart data={fteData} layout="vertical" margin={{ top: 4, right: 60, bottom: 8, left: 8 }}>
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                    <XAxis
+                      type="number"
+                      tickFormatter={v => `${v} FTE`}
+                      tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      width={148}
+                      tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      formatter={(value) => [`${value} FTE`, 'Workload']}
+                      labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <Bar dataKey="fte" radius={[0, 4, 4, 0]}>
+                      {fteData.map((entry, i) => (
+                        <Cell key={i} fill={STAGE_COLORS[entry.stage] ?? '#2d6a4a'} />
+                      ))}
+                      <LabelList
+                        dataKey="fte"
+                        position="right"
+                        formatter={v => v.toFixed(2)}
+                        style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
+          </div>
+
+          {/* ── Row 2: Breakdown Team Capacity — full-width standalone accordion ── */}
+          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '16px 24px 20px', marginBottom: 28, overflow: 'hidden', minWidth: 0 }}>
             <Accordion summary="Breakdown Team Capacity (Matrix View)" noSeparator>
               <CapacityMatrix entries={tfEntries} timeframe={timeframe} />
             </Accordion>
           </div>
 
-          {/* ── 4. Lifetime Hours by Deal — full width ── */}
+          {/* ── Row 3: Lifetime Hours by Deal — full width ── */}
           <ChartCard
             title="Lifetime Hours by Deal"
-            description="Cumulative actual hours invested across all tracked deals. Click a stage to filter."
+            description="Cumulative actual hours invested per deal across all time. Click a stage to filter."
           >
             <StageFilterPills filters={lifetimeFilters} onChange={setLifetimeFilters} />
             {lifetimeQ.isLoading ? (
@@ -737,7 +745,7 @@ export default function TeamAnalytics() {
             </Accordion>
           </ChartCard>
 
-          {/* ── 5. Lifetime Hours by Stage — pie ── */}
+          {/* ── Row 4: Lifetime Hours by Stage — donut, legend below ── */}
           <ChartCard
             title="Lifetime Hours by Stage"
             description="Share of all tracked deal hours invested at each stage."
@@ -754,19 +762,27 @@ export default function TeamAnalytics() {
                     dataKey="hrs"
                     nameKey="name"
                     cx="50%"
-                    cy="50%"
+                    cy="46%"
                     outerRadius={100}
                     innerRadius={52}
                     paddingAngle={2}
-                    label={({ name, pct }) => `${name} ${pct}%`}
-                    labelLine
                   >
                     {stageInvestData.map((entry, i) => (
                       <Cell key={i} fill={PIE_STAGE_COLORS[entry.name] ?? '#9a9589'} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value} hrs`, 'Hours']} contentStyle={{ fontSize: 12 }} />
-                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '0.75rem', fontFamily: 'DM Sans, sans-serif' }} />
+                  <Tooltip
+                    formatter={(value, name, props) => [`${value} hrs (${props.payload.pct}%)`, name]}
+                    contentStyle={{ fontSize: 12 }}
+                  />
+                  <Legend
+                    iconType="circle"
+                    iconSize={8}
+                    layout="horizontal"
+                    verticalAlign="bottom"
+                    align="center"
+                    wrapperStyle={{ fontSize: '0.75rem', fontFamily: 'DM Sans, sans-serif', paddingTop: 12 }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             )}
