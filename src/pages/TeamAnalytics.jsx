@@ -532,16 +532,16 @@ export default function TeamAnalytics() {
 
   const isLoading = stageMapQ.isLoading || tfEntriesQ.isLoading
 
-  // Capacity chart height
-  const capHeight = Math.max(240, capacityData.length * 56 + 80)
+  // Capacity chart height — shorter now that it's in a 50% column
+  const capHeight = Math.max(180, capacityData.length * 38 + 60)
   // FTE chart height — dynamic by deal count
-  const fteRowH = 32
-  const fteHeight = Math.max(120, 40 + fteData.length * fteRowH)
+  const fteRowH = 26
+  const fteHeight = Math.max(100, 40 + fteData.length * fteRowH)
   // Lifetime chart height
-  const lifeHeight = Math.max(120, 40 + lifetimeData.length * fteRowH)
+  const lifeHeight = Math.max(100, 40 + lifetimeData.length * fteRowH)
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+    <div style={{ maxWidth: 1200, width: '100%', margin: '0 auto', padding: '2rem 1.5rem 4rem', boxSizing: 'border-box', overflow: 'hidden' }}>
       {/* Header */}
       <div
         style={{
@@ -569,7 +569,7 @@ export default function TeamAnalytics() {
           {/* ── Row 1: Capacity + FTE side-by-side ── */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 0 }}>
             <ChartCard
-              style={{ marginBottom: 0 }}
+              style={{ marginBottom: 0, minWidth: 0 }}
               title={timeframe === 'week' ? 'Team Capacity — This Week' : 'Average Team Capacity — This Month'}
               description="Expected % committed by category per team member."
             >
@@ -633,7 +633,7 @@ export default function TeamAnalytics() {
 
             {/* Deal Workload FTE */}
             <ChartCard
-              style={{ marginBottom: 0 }}
+              style={{ marginBottom: 0, minWidth: 0 }}
               title={timeframe === 'week' ? 'Deal Workload (FTE) — This Week' : 'Avg Deal Workload (FTE) — This Month'}
               description="Total FTE dedicated to active deals. Click a stage to filter."
             >
@@ -684,7 +684,7 @@ export default function TeamAnalytics() {
           </div>
 
           {/* ── Row 2: Full-width Breakdown Team Capacity accordion ── */}
-          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '16px 24px 20px', marginBottom: 28, marginTop: 0, borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
+          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '16px 24px 20px', marginBottom: 28, marginTop: 0, borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0, overflow: 'hidden', minWidth: 0 }}>
             <Accordion summary="Breakdown Team Capacity (Matrix View)" noSeparator>
               <CapacityMatrix entries={tfEntries} timeframe={timeframe} />
             </Accordion>
