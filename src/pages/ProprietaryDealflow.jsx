@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import {
   PieChart, Pie, Cell, Label,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList,
-  FunnelChart, Funnel,
   ResponsiveContainer,
 } from 'recharts'
 import { useProprietaryDeals, useTotalDealsCount } from '../hooks/useProprietaryDeals'
@@ -337,14 +336,13 @@ export default function ProprietaryDealflow() {
     return Object.values(acc).sort((a, b) => b.total - a.total)
   }, [deals])
 
-  const funnelData = useMemo(() => {
-    const counts = {}
-    deals.forEach(d => { counts[d.stage] = (counts[d.stage] || 0) + 1 })
-    return FUNNEL_STAGE_ORDER
-      .filter(s => counts[s] > 0)
-      .map(s => ({ name: FUNNEL_STAGE_LABELS[s] ?? s, value: counts[s], fill: FUNNEL_STAGE_COLORS[s] ?? '#9ca3af' }))
-      .sort((a, b) => b.value - a.value)
-  }, [deals])
+  const stageBarData = useMemo(() =>
+    FUNNEL_STAGE_ORDER.map((s, idx) => ({
+      name:  FUNNEL_STAGE_LABELS[s] ?? s,
+      value: deals.filter(d => FUNNEL_STAGE_ORDER.indexOf(d.stage) >= idx).length,
+      fill:  FUNNEL_STAGE_COLORS[s] ?? '#9ca3af',
+    })).filter(row => row.value > 0),
+  [deals])
 
   const kamBarKey = kamPivot === 'volume' ? 'total' : 'quality'
   const kamHeight = Math.max(120, 40 + kamData.length * 34)
@@ -425,7 +423,7 @@ export default function ProprietaryDealflow() {
           {/* Funnel */}
           <ChartCard
             title="Pipeline Stage Distribution"
-            description="Proprietary deals by current pipeline stage."
+            description="Deals that reached or passed each pipeline stage."
             action={
               <PivotToggle
                 value={funnelPivot ? 'By Captain' : 'Total'}
@@ -465,25 +463,38 @@ export default function ProprietaryDealflow() {
                 )
               })()
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <FunnelChart>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart
+                  layout="vertical"
+                  data={stageBarData}
+                  margin={{ top: 4, right: 48, bottom: 4, left: 130 }}
+                >
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    width={120}
+                    tick={{ fontSize: 12, fontFamily: 'DM Sans, sans-serif', fill: 'var(--ink)' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <XAxis
+                    type="number"
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: 'var(--muted)' }}
+                  />
                   <Tooltip formatter={(v) => [v, 'Deals']} contentStyle={{ fontSize: 12 }} />
-                  <Funnel dataKey="value" data={[...funnelData].sort((a, b) => b.value - a.value)} isAnimationActive={false}>
-                    {[...funnelData].sort((a, b) => b.value - a.value).map((entry, i) => (
+                  <Bar dataKey="value" name="Deals" radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                    {stageBarData.map((entry, i) => (
                       <Cell key={i} fill={entry.fill} />
                     ))}
                     <LabelList
-                      dataKey="name"
-                      position="center"
-                      style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', fill: 'white', fontWeight: 600 }}
-                    />
-                    <LabelList
                       dataKey="value"
                       position="right"
-                      style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
+                      style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: 'var(--muted)' }}
                     />
-                  </Funnel>
-                </FunnelChart>
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             )}
           </ChartCard>
