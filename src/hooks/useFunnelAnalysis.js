@@ -9,7 +9,7 @@ export function useFunnelStages() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ReportingNz_funnel_analysis')
-        .select('stage_value, stage_rank, reached_stage, avg_days_in_stage, cumulative_conversion_pct, stage_to_stage_pct')
+        .select('stage_value, stage_rank, reached_stage, median_days_in_stage, cumulative_conversion_pct, stage_to_stage_pct')
         .order('stage_rank', { ascending: true })
       if (error) throw error
       return data || []

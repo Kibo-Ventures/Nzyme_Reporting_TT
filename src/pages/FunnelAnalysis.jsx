@@ -284,7 +284,7 @@ export default function FunnelAnalysis() {
         stage_value: stageVal,
         stage_rank: idx + 1,
         reached_stage: reached,
-        avg_days_in_stage: null,
+        median_days_in_stage: null,
         cumulative_conversion_pct: total > 0 ? Math.round((reached / total) * 100) : null,
         stage_to_stage_pct: prevReached > 0 ? Math.round((reached / prevReached) * 100) : null,
       }
@@ -303,7 +303,7 @@ export default function FunnelAnalysis() {
     // avgDays only from DB view (not available when filtered)
     const avgDays = filteredStages
       ? null
-      : stages.reduce((sum, s) => sum + (s.avg_days_in_stage ?? 0), 0)
+      : stages.reduce((sum, s) => sum + (s.median_days_in_stage ?? 0), 0)
     return { entry, portfolio, convRate, avgDays: avgDays != null ? Math.round(avgDays) : null }
   }, [activeStages, filteredStages, stages])
 
@@ -389,9 +389,9 @@ export default function FunnelAnalysis() {
           subtitle="overall conversion rate"
         />
         <KpiCard
-          title="Avg Days to Portfolio"
+          title="Median Days to Portfolio"
           value={kpis.avgDays ?? '—'}
-          subtitle="sum of avg time per stage"
+          subtitle="sum of median time per stage"
         />
       </div>
 
@@ -488,7 +488,7 @@ export default function FunnelAnalysis() {
           <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--accent-light)' }}>
-                {['Stage', 'Reached', "Didn't Advance", 'Cumul. Conv. %', 'Stage-to-Stage %', 'Avg Days', 'Total Hrs', 'Avg Hrs to Progress'].map((h) => (
+                {['Stage', 'Reached', "Didn't Advance", 'Cumul. Conv. %', 'Stage-to-Stage %', 'Median Days', 'Total Hrs', 'Avg Hrs to Progress'].map((h) => (
                   <th
                     key={h}
                     className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide"
@@ -545,7 +545,7 @@ export default function FunnelAnalysis() {
                       {s.stage_to_stage_pct != null ? `${s.stage_to_stage_pct}%` : '—'}
                     </td>
                     <td className="px-3 py-2 font-mono" style={{ color: 'var(--muted)' }}>
-                      {s.avg_days_in_stage != null ? `${Math.round(s.avg_days_in_stage)}d` : '—'}
+                      {s.median_days_in_stage != null ? `${Math.round(s.median_days_in_stage)}d` : '—'}
                     </td>
                     {(() => {
                       const ti = timeByStage[s.stage_value]
