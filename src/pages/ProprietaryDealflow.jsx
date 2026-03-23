@@ -83,7 +83,7 @@ function PivotToggle({ options, value, onChange }) {
 
 // ── Chart card ────────────────────────────────────────────────────────────────
 
-function ChartCard({ title, description, action, children }) {
+function ChartCard({ title, description, action, children, style = {} }) {
   return (
     <div
       style={{
@@ -92,6 +92,7 @@ function ChartCard({ title, description, action, children }) {
         borderRadius: 8,
         padding: '20px 24px',
         marginBottom: 24,
+        ...style,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
@@ -396,6 +397,7 @@ export default function ProprietaryDealflow() {
 
             {/* KAM bar chart */}
             <ChartCard
+              style={{ marginBottom: 0 }}
               title="Deals per Deal Captain"
               description="Proprietary deal volume by team member in the selected timeframe."
               action={

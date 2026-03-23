@@ -80,11 +80,8 @@ const COLS = [
   { key: 'qualityRate',       label: '% Quality',                align: 'right' },
   { key: 'avgPriority',       label: 'Avg Priority',             align: 'right' },
   { key: 'nboCount',          label: 'NBOs',                     align: 'right' },
-  { key: 'costPerNbo',        label: 'Cost / NBO',               align: 'right' },
-  { key: 'avgCostPerMonth',   label: 'Avg Cost / Month',         align: 'right' },
   { key: 'totalHours',        label: 'Total Hours',              align: 'right' },
   { key: 'dealHours',         label: 'Time Invested in Deals',   align: 'right' },
-  { key: 'costPerQualityLead',label: 'Cost / Quality Lead',      align: 'right' },
   { key: 'difficulty',        label: 'Difficulty',               align: 'center' },
   { key: 'potential',         label: 'Potential',                align: 'center' },
 ]
@@ -163,19 +160,10 @@ function ChannelTable({ rows }) {
                 {row.nboCount > 0 ? row.nboCount : '—'}
               </td>
               <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
-                {formatEur(row.costPerNbo)}
-              </td>
-              <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
-                {formatEur(row.avgCostPerMonth)}
-              </td>
-              <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
                 {row.totalHours != null && row.totalHours > 0 ? `${Math.round(row.totalHours)}h` : '—'}
               </td>
               <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
                 {row.dealHours != null && row.dealHours > 0 ? `${Math.round(row.dealHours)}h` : '—'}
-              </td>
-              <td style={{ padding: '9px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
-                {formatEur(row.costPerQualityLead)}
               </td>
               <td style={{ padding: '9px 10px', textAlign: 'center', borderBottom: '1px solid var(--rule)' }}>
                 <DiffPotBadge value={row.difficulty} colorMap={DIFFICULTY_COLOR} />

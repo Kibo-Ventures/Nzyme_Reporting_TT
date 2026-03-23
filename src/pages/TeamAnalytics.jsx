@@ -535,7 +535,7 @@ export default function TeamAnalytics() {
   const isLoading = stageMapQ.isLoading || tfEntriesQ.isLoading
 
   // Capacity: fixed — at half-width vertical bars stay readable
-  const capHeight = 260
+  const capHeight = 300
   // FTE: scale with data; min 260 so it aligns with capacity card height
   const fteHeight = Math.max(260, 44 + fteData.length * 26)
   // Lifetime: slightly taller bars (28 px) so long deal names stay readable
@@ -568,7 +568,7 @@ export default function TeamAnalytics() {
       {!isLoading && (
         <>
           {/* ── Row 1: two-column grid — Capacity (left) + FTE (right) ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28, alignItems: 'stretch' }}>
 
             {/* Left: Team Capacity stacked bar */}
             <ChartCard
@@ -628,9 +628,9 @@ export default function TeamAnalytics() {
               </div>
             </ChartCard>
 
-            {/* Right: Deal Workload FTE — tinted background to visually differentiate */}
+            {/* Right: Deal Workload FTE */}
             <ChartCard
-              style={{ marginBottom: 0, background: '#f7f5f0' }}
+              style={{ marginBottom: 0 }}
               title={timeframe === 'week' ? 'Deal Workload (FTE) — This Week' : 'Avg Deal Workload (FTE) — This Month'}
               description="Total FTE per active deal. Click a stage to filter."
             >
