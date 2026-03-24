@@ -32,14 +32,15 @@ function ChartTooltip({ active, payload, xAxis, yAxis }) {
   const yLabel = AXIS_OPTIONS.find(o => o.value === yAxis)?.label;
   return (
     <div style={{
-      background: 'var(--paper)',
+      background: 'var(--surface)',
       border: '1px solid var(--rule)',
-      borderRadius: 6,
+      borderRadius: 8,
       padding: '10px 14px',
-      fontFamily: 'DM Sans',
+      fontFamily: 'var(--font-sans)',
       fontSize: 13,
       color: 'var(--ink)',
       maxWidth: 240,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
     }}>
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{d.deal_name}</div>
       <div style={{ color: 'var(--muted)', marginBottom: 6, fontSize: 12 }}>{d.captain}</div>
@@ -51,6 +52,16 @@ function ChartTooltip({ active, payload, xAxis, yAxis }) {
     </div>
   );
 }
+
+const selectStyle = {
+  border: '1px solid var(--rule)',
+  borderRadius: 8,
+  padding: '5px 10px',
+  fontSize: 13,
+  fontFamily: 'var(--font-sans)',
+  color: 'var(--ink)',
+  background: 'var(--surface)',
+};
 
 export default function DynamicAnalysis() {
   const [xAxis, setXAxis] = useState('total_hrs');
@@ -90,125 +101,107 @@ export default function DynamicAnalysis() {
   const tableRows = showAll ? sortedData : sortedData.slice(0, 8);
 
   return (
-    <div className="p-6" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
       {/* Page header */}
-      <div>
-        <h1 style={{ fontFamily: 'DM Serif Display', fontSize: 28, color: 'var(--ink)', margin: 0 }}>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: 4, color: 'var(--ink)' }}>
           Dynamic Analysis
         </h1>
-        <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
+        <p style={{ color: 'var(--muted)', fontSize: 14, margin: 0 }}>
           Plot any two dimensions across all deals to surface patterns.
         </p>
       </div>
 
-      {/* Axis controls */}
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        <label style={{ fontSize: 13, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          X Axis
-          <select
-            value={xAxis}
-            onChange={e => setXAxis(e.target.value)}
-            style={{
-              border: '1px solid var(--rule)',
-              borderRadius: 6,
-              padding: '5px 10px',
-              fontSize: 13,
-              fontFamily: 'DM Sans',
-              color: 'var(--ink)',
-              background: 'var(--paper)',
-            }}
-          >
-            {AXIS_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </label>
+      {/* Chart card */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
+        {/* Axis controls */}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
+          <label style={{ fontSize: 13, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)' }}>
+            X Axis
+            <select value={xAxis} onChange={e => setXAxis(e.target.value)} style={selectStyle}>
+              {AXIS_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </label>
 
-        <label style={{ fontSize: 13, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          Y Axis
-          <select
-            value={yAxis}
-            onChange={e => setYAxis(e.target.value)}
-            style={{
-              border: '1px solid var(--rule)',
-              borderRadius: 6,
-              padding: '5px 10px',
-              fontSize: 13,
-              fontFamily: 'DM Sans',
-              color: 'var(--ink)',
-              background: 'var(--paper)',
-            }}
-          >
-            {AXIS_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </label>
+          <label style={{ fontSize: 13, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)' }}>
+            Y Axis
+            <select value={yAxis} onChange={e => setYAxis(e.target.value)} style={selectStyle}>
+              {AXIS_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </label>
 
-        <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 'auto' }}>
-          {data.length} deals plotted
-        </span>
-      </div>
-
-      {/* Chart */}
-      {isLoading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-          <LoadingSpinner />
+          <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 'auto', fontFamily: 'var(--font-sans)' }}>
+            {data.length} deals plotted
+          </span>
         </div>
-      ) : (
-        <ResponsiveContainer width="100%" height={420}>
-          <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" />
-            <XAxis
-              dataKey={xAxis}
-              name={AXIS_OPTIONS.find(o => o.value === xAxis)?.label}
-              type="number"
-              label={{
-                value: AXIS_OPTIONS.find(o => o.value === xAxis)?.label,
-                position: 'insideBottom',
-                offset: -10,
-                style: { fontFamily: 'DM Sans', fontSize: 12, fill: 'var(--muted)' },
-              }}
-              tick={{ fontFamily: 'DM Mono', fontSize: 11, fill: 'var(--muted)' }}
-            />
-            <YAxis
-              dataKey={yAxis}
-              name={AXIS_OPTIONS.find(o => o.value === yAxis)?.label}
-              type="number"
-              label={{
-                value: AXIS_OPTIONS.find(o => o.value === yAxis)?.label,
-                angle: -90,
-                position: 'insideLeft',
-                style: { fontFamily: 'DM Sans', fontSize: 12, fill: 'var(--muted)' },
-              }}
-              tick={{ fontFamily: 'DM Mono', fontSize: 11, fill: 'var(--muted)' }}
-            />
-            <Tooltip
-              cursor={{ strokeDasharray: '3 3', stroke: 'var(--muted)' }}
-              content={<ChartTooltip xAxis={xAxis} yAxis={yAxis} />}
-            />
-            <Legend
-              wrapperStyle={{ fontFamily: 'DM Sans', fontSize: 12 }}
-            />
-            {Object.entries(byStage).map(([stage, deals]) => (
-              <Scatter
-                key={stage}
-                name={stage}
-                data={deals}
-                fill={STAGE_COLORS[stage] ?? '#9a9589'}
-                fillOpacity={0.75}
+
+        {isLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={420}>
+            <ScatterChart margin={{ top: 10, right: 20, bottom: 40, left: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" />
+              <XAxis
+                dataKey={xAxis}
+                name={AXIS_OPTIONS.find(o => o.value === xAxis)?.label}
+                type="number"
+                label={{
+                  value: AXIS_OPTIONS.find(o => o.value === xAxis)?.label,
+                  position: 'insideBottom',
+                  offset: -10,
+                  style: { fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--muted)' },
+                }}
+                tick={{ fontFamily: 'var(--font-mono)', fontSize: 11, fill: 'var(--muted)' }}
               />
-            ))}
-          </ScatterChart>
-        </ResponsiveContainer>
-      )}
+              <YAxis
+                dataKey={yAxis}
+                name={AXIS_OPTIONS.find(o => o.value === yAxis)?.label}
+                type="number"
+                label={{
+                  value: AXIS_OPTIONS.find(o => o.value === yAxis)?.label,
+                  angle: -90,
+                  position: 'insideLeft',
+                  style: { fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--muted)' },
+                }}
+                tick={{ fontFamily: 'var(--font-mono)', fontSize: 11, fill: 'var(--muted)' }}
+              />
+              <Tooltip
+                cursor={{ strokeDasharray: '3 3', stroke: 'var(--muted)' }}
+                content={<ChartTooltip xAxis={xAxis} yAxis={yAxis} />}
+              />
+              <Legend
+                verticalAlign="top"
+                wrapperStyle={{ fontFamily: 'var(--font-sans)', fontSize: 12, paddingBottom: 12 }}
+              />
+              {Object.entries(byStage).map(([stage, deals]) => (
+                <Scatter
+                  key={stage}
+                  name={stage}
+                  data={deals}
+                  fill={STAGE_COLORS[stage] ?? '#9a9589'}
+                  fillOpacity={0.75}
+                />
+              ))}
+            </ScatterChart>
+          </ResponsiveContainer>
+        )}
+      </div>
 
       {/* Deal detail table */}
       {!isLoading && data.length > 0 && (
-        <div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: 'DM Sans' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px' }}>
+          <h3 style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '1.0625rem', marginBottom: 16, color: 'var(--ink)' }}>
+            Deal Breakdown
+          </h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: 'var(--font-sans)' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--rule)' }}>
+              <tr style={{ borderBottom: '2px solid var(--rule)' }}>
                 {[
                   { col: 'deal_name',          label: 'Deal' },
                   { col: 'captain',            label: 'Captain' },
@@ -228,6 +221,7 @@ export default function DynamicAnalysis() {
                       cursor: 'pointer',
                       userSelect: 'none',
                       whiteSpace: 'nowrap',
+                      fontSize: 12,
                     }}
                   >
                     {label}
@@ -242,23 +236,23 @@ export default function DynamicAnalysis() {
                   key={d.deal_id ?? i}
                   style={{
                     borderBottom: '1px solid var(--rule)',
-                    background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.01)',
+                    background: i % 2 === 0 ? 'transparent' : 'var(--paper)',
                   }}
                 >
-                  <td style={{ padding: '8px 10px', color: 'var(--ink)', fontWeight: 500 }}>
+                  <td style={{ padding: '9px 10px', color: 'var(--ink)', fontWeight: 500 }}>
                     {d.deal_name}
                   </td>
-                  <td style={{ padding: '8px 10px', color: 'var(--muted)' }}>{d.captain}</td>
-                  <td style={{ padding: '8px 10px' }}>
+                  <td style={{ padding: '9px 10px', color: 'var(--muted)' }}>{d.captain}</td>
+                  <td style={{ padding: '9px 10px' }}>
                     <StageBadge stage={d.current_stage} />
                   </td>
-                  <td style={{ padding: '8px 10px', fontFamily: 'DM Mono', color: 'var(--ink)' }}>
+                  <td style={{ padding: '9px 10px', fontFamily: 'var(--font-mono)', color: 'var(--ink)', fontSize: 12 }}>
                     {d.total_hrs}
                   </td>
-                  <td style={{ padding: '8px 10px', fontFamily: 'DM Mono', color: 'var(--ink)' }}>
+                  <td style={{ padding: '9px 10px', fontFamily: 'var(--font-mono)', color: 'var(--ink)', fontSize: 12 }}>
                     {Number(d.avg_days_per_stage).toFixed(1)}
                   </td>
-                  <td style={{ padding: '8px 10px', fontFamily: 'DM Mono', color: 'var(--ink)' }}>
+                  <td style={{ padding: '9px 10px', fontFamily: 'var(--font-mono)', color: 'var(--ink)', fontSize: 12 }}>
                     {d.deal_age_days}
                   </td>
                 </tr>
@@ -273,6 +267,7 @@ export default function DynamicAnalysis() {
                 marginTop: 10,
                 fontSize: 12,
                 color: 'var(--muted)',
+                fontFamily: 'var(--font-sans)',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
