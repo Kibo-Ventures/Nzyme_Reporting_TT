@@ -62,6 +62,8 @@ function PivotToggle({ options, value, onChange }) {
         <button
           key={opt.key}
           onClick={() => onChange(opt.key)}
+          className="toggle-btn"
+          data-active={value === opt.key ? 'true' : undefined}
           style={{
             padding: '4px 12px',
             fontSize: '0.75rem',
@@ -89,7 +91,7 @@ function ChartCard({ title, description, action, children, style = {} }) {
       style={{
         background: 'white',
         border: '1px solid var(--rule)',
-        borderRadius: 8,
+        borderRadius: 12,
         padding: '20px 24px',
         marginBottom: 24,
         ...style,
@@ -231,7 +233,7 @@ function DrilldownTable({ deals }) {
 
   return (
     <div>
-      <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 6 }}>
+      <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 8 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
           <thead>
             <tr>
@@ -284,7 +286,7 @@ function DrilldownTable({ deals }) {
             style={{
               background: 'none',
               border: '1px solid var(--rule)',
-              borderRadius: 6,
+              borderRadius: 8,
               padding: '5px 16px',
               fontSize: '0.8125rem',
               cursor: 'pointer',
@@ -377,7 +379,7 @@ export default function ProprietaryDealflow() {
           {/* Donut + KAM bar */}
           <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 20, marginBottom: 24 }}>
             {/* Donut card */}
-            <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '20px 16px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 16px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '0.9375rem', marginBottom: 2, textAlign: 'center' }}>
                 Goal Progress
               </h3>

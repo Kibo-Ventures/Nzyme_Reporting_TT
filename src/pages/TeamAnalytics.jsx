@@ -199,7 +199,7 @@ function ChartCard({ title, description, children, style = {} }) {
       style={{
         background: 'white',
         border: '1px solid var(--rule)',
-        borderRadius: 8,
+        borderRadius: 12,
         padding: '24px 24px 20px',
         marginBottom: 28,
         overflow: 'hidden',
@@ -228,7 +228,7 @@ function TimeframeToggle({ value, onChange }) {
         fontSize: '0.78rem',
         fontWeight: 500,
         cursor: 'pointer',
-        borderRadius: 4,
+        borderRadius: 6,
         border: 'none',
         background: value === mode ? 'white' : 'transparent',
         color: value === mode ? 'var(--ink)' : 'var(--muted)',
@@ -240,7 +240,7 @@ function TimeframeToggle({ value, onChange }) {
     </button>
   )
   return (
-    <div style={{ display: 'inline-flex', background: 'var(--rule)', padding: 3, borderRadius: 6 }}>
+    <div style={{ display: 'inline-flex', background: 'var(--rule)', padding: 3, borderRadius: 8 }}>
       {btn('week', 'This Week')}
       {btn('month', 'This Month')}
     </div>
@@ -325,7 +325,7 @@ function Accordion({ summary, children, noSeparator = false }) {
 }
 
 const TABLE_STYLES = {
-  wrapper: { overflowX: 'auto', maxWidth: '100%', border: '1px solid var(--rule)', borderRadius: 4 },
+  wrapper: { overflowX: 'auto', maxWidth: '100%', border: '1px solid var(--rule)', borderRadius: 8 },
   table: { width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-mono)', fontSize: 11, background: 'white' },
 }
 
@@ -681,7 +681,7 @@ export default function TeamAnalytics() {
           </div>
 
           {/* ── Row 2: Breakdown Team Capacity — full-width standalone accordion ── */}
-          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '16px 24px 20px', marginBottom: 28, overflow: 'hidden', minWidth: 0 }}>
+          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '16px 24px 20px', marginBottom: 28, overflow: 'hidden', minWidth: 0 }}>
             <Accordion summary="Breakdown Team Capacity (Matrix View)" noSeparator>
               <CapacityMatrix entries={tfEntries} timeframe={timeframe} />
             </Accordion>

@@ -37,7 +37,7 @@ const COL = {
   milestone:   { width: 120, flexShrink: 0 },
 }
 
-const MILESTONE_ORDER = ['NDA Signed', 'NBO Sent', 'IM Received']
+const MILESTONE_ORDER = ['NBO Sent', 'NDA Signed', 'IM Received']
 
 function lastMilestone(milestones) {
   if (!milestones) return null
@@ -87,6 +87,8 @@ function DealDetail({ deal }) {
         padding: '16px 20px',
         background: '#fafaf8',
         borderTop: '1px solid var(--rule)',
+        borderRadius: '0 0 12px 12px',
+        boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.04)',
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
         gap: '12px 24px',
@@ -200,7 +202,7 @@ function StageGroup({ group, expandedDeal, onToggleDeal }) {
     <div
       style={{
         border: '1px solid var(--rule)',
-        borderRadius: 8,
+        borderRadius: 12,
         overflow: 'hidden',
         marginBottom: 16,
       }}

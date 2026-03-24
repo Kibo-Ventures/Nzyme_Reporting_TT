@@ -106,6 +106,8 @@ function FilterPills({ filterType, onChange }) {
         <button
           key={opt.key}
           onClick={() => onChange(filterType === opt.key ? null : opt.key)}
+          className="toggle-btn"
+          data-active={filterType === opt.key ? 'true' : undefined}
           style={{
             padding: '5px 14px',
             fontSize: '0.75rem',
@@ -131,7 +133,7 @@ function TimeInvestedTable({ stages, timeByStage }) {
   const [expandedStage, setExpandedStage] = useState(null)
 
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 6 }}>
+    <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 8 }}>
       <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ background: '#fafaf8' }}>
@@ -418,7 +420,7 @@ export default function FunnelAnalysis() {
                   padding: '5px 10px',
                   fontSize: '0.75rem',
                   border: '1px solid var(--rule)',
-                  borderRadius: 6,
+                  borderRadius: 8,
                   background: 'white',
                   color: filterValue ? 'var(--ink)' : 'var(--muted)',
                   cursor: 'pointer',

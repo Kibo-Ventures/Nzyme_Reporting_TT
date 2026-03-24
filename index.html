@@ -1,18 +1,857 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kibo Ventures — Internal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display:ital@0;1&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Time Tracker — PE Fund</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:           #0f0f0f;
+    --paper:         #f7f5f0;
+    --muted:         #9a9589;
+    --rule:          #e5e2db;
+    --accent:        #1a3a2a;
+    --accent-light:  #e8f0eb;
+    --danger:        #c0392b;
+    --col-pct-bg:    #f0f5f2;
+    --col-hrs-bg:    #f5f0e8;
+    --portco-bg:     #eef0f8;
+    --portco-fg:     #3a4080;
+    --longtail-bg:   #f5eef8;
+    --longtail-fg:   #6b3a80;
+    --orig-bg:       #fff4e8;
+    --orig-fg:       #8a5020;
+    --mono:          'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.4;
+  }
+
+  .app-wrapper {
+    position: relative; z-index: 1;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 40px 24px 100px;
+  }
+
+  /* ── Logo ── */
+  .logo-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; flex-wrap: wrap; gap: 10px; }
+  .logo-left { display: flex; align-items: baseline; gap: 8px; }
+  .logo-mark {
+    width: 20px; height: 20px;
+    border: 1.5px solid var(--ink); border-radius: 3px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 9px; font-weight: 500;
+  }
+  .logo-text { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .logo-right { display: flex; align-items: center; gap: 10px; }
+
+  /* ── User select ── */
+  .select-wrapper { position: relative; display: inline-block; }
+  .select-wrapper select {
+    appearance: none; background: white;
+    border: 1px solid var(--rule); border-radius: 4px;
+    padding: 7px 28px 7px 11px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    color: var(--ink); cursor: pointer; outline: none; transition: border-color 0.15s;
+  }
+  .select-wrapper select:focus { border-color: var(--ink); }
+  .select-wrapper::after { content: '↓'; position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-size: 10px; pointer-events: none; color: var(--muted); }
+
+  /* ── Header block ── */
+  .page-header { margin-bottom: 28px; }
+  .week-badge { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin-bottom: 4px; display: block; }
+  .page-title { font-family: 'DM Serif Display', serif; font-size: 26px; line-height: 1.2; letter-spacing: -0.5px; }
+
+  /* ── Column header strip ── */
+  .col-header-row {
+    display: grid;
+    grid-template-columns: 1fr 108px 108px;
+    gap: 0;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0;
+    margin-bottom: 0;
+    align-items: stretch;
+  }
+  .col-header-cell {
+    padding: 10px 10px 10px 0;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .col-header-cell.col-pct {
+    background: var(--col-pct-bg);
+    color: var(--accent);
+    border-radius: 5px 5px 0 0;
+    padding: 10px 10px;
+    text-align: center;
+    border: 1px solid #d4e4da;
+    border-bottom: none;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+  .col-header-cell.col-hrs {
+    background: var(--col-hrs-bg);
+    color: #8a6030;
+    border-radius: 5px 5px 0 0;
+    padding: 10px 10px;
+    text-align: center;
+    border: 1px solid #e4d8c4;
+    border-bottom: none;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+  .col-sub {
+    display: block;
+    font-family: var(--mono);
+    font-size: 8.5px;
+    letter-spacing: 0.03em;
+    opacity: 0.7;
+    margin-top: 2px;
+    text-transform: none;
+    font-weight: 400;
+  }
+
+  /* ── Category label ── */
+  .section-block { margin-top: 0; }
+  .category-row {
+    display: grid;
+    grid-template-columns: 1fr 108px 108px;
+    background: #f2efe8;
+    border-bottom: 1px solid var(--rule);
+  }
+  .category-cell {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); padding: 8px 0 7px;
+    font-weight: 400;
+  }
+  .category-cell.shaded-pct { background: rgba(232,240,235,0.5); }
+  .category-cell.shaded-hrs { background: rgba(245,235,210,0.35); }
+
+  /* ── Data rows ── */
+  .data-row {
+    display: grid;
+    grid-template-columns: 1fr 108px 108px;
+    border-bottom: 1px solid var(--rule);
+    transition: background 0.08s;
+    align-items: start;
+  }
+  .data-row:hover { background: rgba(0,0,0,0.012); }
+  .data-row.expanded { border-bottom: none; }
+
+  .row-label-cell { padding: 11px 8px 11px 0; font-size: 13px; color: var(--ink); }
+  .row-input-cell {
+    padding: 8px 6px;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  .row-input-cell.pct-col { background: rgba(232,240,235,0.3); }
+  .row-input-cell.hrs-col { background: rgba(245,235,210,0.2); }
+
+  /* ── Tags ── */
+  .row-tag {
+    display: inline-block; font-family: var(--mono); font-size: 8.5px;
+    letter-spacing: 0.06em; padding: 1px 4px; border-radius: 2px;
+    margin-left: 5px; vertical-align: middle; position: relative; top: -1px;
+  }
+  .row-tag.deal     { background: #f0ede5; color: #7a7060; }
+  .row-tag.internal { background: var(--accent-light); color: var(--accent); }
+  .row-tag.portco   { background: var(--portco-bg); color: var(--portco-fg); }
+  .row-tag.longtail { background: var(--longtail-bg); color: var(--longtail-fg); }
+  .row-tag.orig     { background: var(--orig-bg); color: var(--orig-fg); }
+
+  /* ── Inputs ── */
+  .num-input {
+    width: 76px; text-align: right;
+    border: 1px solid var(--rule); border-radius: 3px;
+    padding: 5px 8px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--ink);
+    background: white; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -moz-appearance: textfield;
+  }
+  .num-input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(15,15,15,0.06); }
+  .num-input::-webkit-outer-spin-button,
+  .num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .num-input.over { border-color: var(--danger) !important; }
+  .num-input.pct-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,58,42,0.08); }
+  .num-input.hrs-input:focus { border-color: #c09060; box-shadow: 0 0 0 3px rgba(180,130,60,0.08); }
+
+  /* ── Expand panels (longtail + origination) ── */
+  .expand-wrap {
+    grid-column: 1 / -1;
+    overflow: hidden; max-height: 0;
+    transition: max-height 0.35s ease, opacity 0.25s ease;
+    opacity: 0;
+  }
+  .expand-wrap.open { max-height: 1200px; opacity: 1; }
+
+  /* ── Scrollable dealflow rows ── */
+  .scroll-rows-wrap {
+    max-height: 300px;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--rule);
+    scrollbar-gutter: stable;
+  }
+  .scroll-rows-wrap .data-row:last-child { border-bottom: none; }
+
+  /* ── Totals bar ── */
+  .totals-strip {
+    display: grid;
+    grid-template-columns: 1fr 108px 108px;
+    border-top: 2px solid var(--ink);
+    margin-top: 4px;
+    padding-top: 10px;
+    align-items: start;
+  }
+  .totals-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted);
+    padding: 6px 0;
+  }
+  .totals-cell { padding: 4px 6px; text-align: center; }
+  .totals-value {
+    font-family: var(--mono); font-size: 18px; font-weight: 500;
+    letter-spacing: -0.5px; transition: color 0.2s; display: block; text-align: center;
+  }
+  .totals-value.ok   { color: var(--ink); }
+  .totals-value.done { color: var(--accent); }
+  .totals-value.over { color: var(--danger); }
+  .totals-sub { font-family: var(--mono); font-size: 9.5px; color: var(--muted); display: block; text-align: center; margin-top: 2px; }
+  .totals-sub.done { color: var(--accent); }
+  .totals-sub.over { color: var(--danger); }
+
+  .progress-track { height: 2px; background: var(--rule); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+  .progress-fill  { height: 100%; border-radius: 2px; transition: width 0.3s ease, background 0.2s; background: var(--ink); }
+  .progress-fill.done { background: var(--accent); }
+  .progress-fill.over { background: var(--danger); }
+
+  /* ── Free Capacity row ── */
+  .free-capacity-row {
+    display: grid;
+    grid-template-columns: 1fr 108px 108px;
+    border-top: 2px solid var(--ink);
+    background: linear-gradient(to right, #f9f7f2, #f0f5f2 50%, #f5f0e8);
+    margin-top: 0;
+  }
+  .free-cap-label {
+    padding: 12px 8px 12px 0;
+    font-size: 13px; font-weight: 500; color: var(--ink);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .free-cap-label .cap-icon {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent-light); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; flex-shrink: 0;
+  }
+  .free-cap-value {
+    padding: 12px 6px; text-align: center;
+    font-family: var(--mono); font-size: 16px; font-weight: 500;
+    transition: color 0.2s;
+  }
+  .free-cap-value.positive { color: var(--accent); }
+  .free-cap-value.zero     { color: var(--muted); }
+  .free-cap-value.negative { color: var(--danger); }
+  .free-cap-value.pct-col  { background: rgba(232,240,235,0.4); }
+  .free-cap-value.hrs-col  { background: rgba(245,235,210,0.3); }
+
+  /* ── Buttons ── */
+  .btn-report {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 14px; border-radius: 4px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+    background: var(--ink); color: var(--paper);
+    cursor: pointer; border: none; transition: background 0.15s; outline: none; text-decoration: none;
+  }
+  .btn-report:hover { background: #2a2a2a; }
+
+  .submit-row { display: flex; justify-content: flex-end; margin-top: 28px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 22px; border-radius: 4px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: 1px solid transparent; transition: all 0.15s;
+    outline: none; letter-spacing: 0.01em; text-decoration: none;
+  }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: #2a2a2a; }
+  .btn-ghost { background: transparent; border-color: var(--rule); color: var(--muted); }
+  .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ── Success screen ── */
+  .success-screen { text-align: center; padding: 60px 20px; }
+  .success-icon { width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--accent); display: inline-flex; align-items: center; justify-content: center; margin: 0 auto 22px; color: var(--accent); font-size: 20px; }
+  .success-title { font-family: 'DM Serif Display', serif; font-size: 30px; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .success-sub   { color: var(--muted); font-size: 13px; margin-bottom: 28px; max-width: 340px; margin-left: auto; margin-right: auto; }
+
+  .summary-card { background: white; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; text-align: left; margin-bottom: 24px; }
+  .summary-card-header { padding: 11px 16px; border-bottom: 1px solid var(--rule); font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
+  .summary-section-label { padding: 7px 16px 4px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: #fafaf8; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .summary-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 16px; border-bottom: 1px solid var(--rule); font-size: 13px; gap: 12px; }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-row-vals { font-family: var(--mono); font-size: 12px; display: flex; gap: 14px; color: var(--muted); flex-shrink: 0; }
+  .summary-row-vals span { min-width: 52px; text-align: right; }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .screen { animation: fadeUp 0.22s ease; }
+
+  /* ── Mobile ── */
+  @media (max-width: 600px) {
+    .app-wrapper { padding: 24px 14px 80px; }
+    .col-header-row, .category-row, .data-row, .totals-strip {
+      grid-template-columns: 1fr 80px 80px;
+    }
+    .num-input { width: 64px; font-size: 12px; }
+    .col-header-cell.col-pct, .col-header-cell.col-hrs { padding: 8px 6px; font-size: 9px; }
+    .page-title { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <div class="logo-bar">
+    <div class="logo-left">
+      <div class="logo-mark">PE</div>
+      <span class="logo-text">Fund Time Tracker</span>
+    </div>
+    <div class="logo-right">
+      <a href="/reporting.html" class="btn-report">↗ Reporting</a>
+      <div class="select-wrapper">
+        <select id="user-select">
+          <option value="">Who are you?</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-form" class="screen">
+    <div class="page-header">
+      <span class="week-badge" id="week-label"></span>
+      <h1 class="page-title">Weekly time log</h1>
+    </div>
+
+    <div class="col-header-row">
+      <div class="col-header-cell"></div>
+      <div class="col-header-cell col-pct">
+        Expected %
+        <span class="col-sub">upcoming week</span>
+      </div>
+      <div class="col-header-cell col-hrs">
+        Actual hrs
+        <span class="col-sub">last week</span>
+      </div>
+    </div>
+
+    <div id="rows-container"></div>
+
+    <div class="totals-strip">
+      <div class="totals-label" style="padding-top:8px;">Committed</div>
+      <div class="totals-cell">
+        <span class="totals-value ok" id="pct-total">0%</span>
+        <div class="progress-track"><div class="progress-fill" id="pct-bar" style="width:0%"></div></div>
+        <span class="totals-sub" id="pct-hint">—</span>
+      </div>
+      <div class="totals-cell">
+        <span class="totals-value ok" id="hrs-total">0 hrs</span>
+        <span class="totals-sub" id="hrs-hint"> </span>
+      </div>
+    </div>
+
+    <div class="free-capacity-row">
+      <div class="free-cap-label">
+        <span class="cap-icon">◎</span>
+        Free Capacity
+      </div>
+      <div class="free-cap-value pct-col positive" id="free-pct">100%</div>
+      <div class="free-cap-value hrs-col positive" id="free-hrs">—</div>
+    </div>
+
+    <div class="submit-row">
+      <button class="btn btn-primary" onclick="submitForm()">Submit log →</button>
+    </div>
+  </div>
+
+  <div id="screen-success" class="screen" style="display:none;">
+    <div class="success-screen">
+      <div class="success-icon">✓</div>
+      <h1 class="success-title">Logged.</h1>
+      <p class="success-sub" id="success-sub"></p>
+      <div class="summary-card" id="summary-card"></div>
+      <button class="btn btn-ghost" onclick="resetApp()">← Log another week</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── SUPABASE ───────────────────────────────────────────────────────────────
+const SUPABASE_URL      = 'https://yphbrpbwpakjduhmoimw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwaGJycGJ3cGFramR1aG1vaW13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4NDI1ODksImV4cCI6MjA3NzQxODU4OX0.bqYSYCMX6eM0f_QUU8UbNLQsfr-DiMicJIQAujdlXKY';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── DATA ──────────────────────────────────────────────────────────────────
+let DEALFLOW       = [];
+let LONGTAIL_DEALS = [];
+let DEAL_STAGE_MAP = {};
+let ORIG_CHANNELS  = [];
+let PORTFOLIO      = [];
+let TEAM_MEMBERS   = [];
+const INTERNAL       = ["Recruiting", "Investor Relations / LP", "Fund Operations", "Expansion & Business Development"];
+const ADMIN_LEAVE = ["Training & development", "Out of office (Bank Holiday, Annual Leave, Sick)"];
+
+function normalizeStage(stage) {
+  if (!stage) return 'Working on Deal';
+  const s = stage.toLowerCase();
+  if (s.includes('dd')) return 'DD Phase';
+  if (s.includes('analysis') || s.includes('analys')) return 'Under Analysis';
+  return 'Working on Deal';
+}
+
+async function loadDeals() {
+  const { data: active } = await sb.from('ReportingNz_deals')
+    .select('name, stage')
+    .in('stage', [
+      'Working on a deal (significant effort)',
+      'Under analysis (team assigned, moderate effort)',
+      'DD phase',
+    ])
+    .order('name');
+  DEALFLOW = (active ?? []).map(r => r.name);
+  (active ?? []).forEach(r => { DEAL_STAGE_MAP[r.name] = normalizeStage(r.stage); });
+
+  const { data: longtail } = await sb.from('ReportingNz_deals')
+    .select('name, stage')
+    .eq('stage', 'Being explored (meetings only)')
+    .order('name');
+  LONGTAIL_DEALS = (longtail ?? []).map(r => r.name);
+  (longtail ?? []).forEach(r => { DEAL_STAGE_MAP[r.name] = normalizeStage(r.stage); });
+
+  const { data: portfolio } = await sb.from('ReportingNz_deals')
+    .select('name')
+    .eq('stage', 'Portfolio')
+    .order('name');
+  PORTFOLIO = (portfolio ?? []).map(r => r.name);
+
+ const { data: channels } = await sb.from('ReportingNz_orig_channels')
+    .select('name')
+    .order('sort_order')
+    .order('name');
+  ORIG_CHANNELS = (channels ?? []).map(r => r.name);
+
+  const { data: members } = await sb.from('ReportingNz_team_members')
+    .select('name')
+    .eq('is_active', true)
+    .order('sort_order')
+    .order('name');
+  TEAM_MEMBERS = (members ?? []).map(r => r.name);
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let pctValues      = {};
+let hrsValues      = {};
+
+// ── WEEK (FIXED WITH LOCAL TIMEZONE LOGIC) ────────────────────────────────
+function getMonday() {
+  const now = new Date();
+  const day = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - day + (day === 0 ? -6 : 1));
+  mon.setHours(0, 0, 0, 0);
+  return mon;
+}
+
+function getMondayISO() {
+  const mon = getMonday();
+  const year = mon.getFullYear();
+  const month = String(mon.getMonth() + 1).padStart(2, '0');
+  const date = String(mon.getDate()).padStart(2, '0');
+  return `${year}-${month}-${date}`;
+}
+
+function getWeekLabel() {
+  const mon  = getMonday();
+  const sun  = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const fmtS = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  const fmtL = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  return `Week of ${fmtS(mon)} – ${fmtL(sun)}`;
+}
+
+// ── FETCH EXISTING DATA ───────────────────────────────────────────────────
+async function loadUserEntries(userName) {
+  pctValues = {};
+  hrsValues = {};
+
+  if (!userName) {
+    buildRows();
+    updatePctTotal();
+    updateHrsTotal();
+    return;
+  }
+
+  const weekStart = getMondayISO();
+  const submitBtn = document.querySelector('.btn-primary');
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = 'Loading...';
+  submitBtn.disabled = true;
+
+  try {
+    const { data, error } = await sb.from('ReportingNz_time_entries')
+      .select('category_key, pct_expected, hrs_actual')
+      .eq('user_name', userName)
+      .eq('week_start', weekStart);
+
+    if (error) throw error;
+
+    if (data) {
+      data.forEach(row => {
+        if (row.pct_expected > 0) pctValues[row.category_key] = row.pct_expected;
+        if (row.hrs_actual > 0) hrsValues[row.category_key] = row.hrs_actual;
+      });
+    }
+  } catch (err) {
+    console.error('Fetch error:', err);
+    alert('Could not load your existing entries. ' + err.message);
+  } finally {
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+    
+    buildRows();
+    updatePctTotal();
+    updateHrsTotal();
+  }
+}
+
+// ── SCREENS ───────────────────────────────────────────────────────────────
+function show(id) {
+  ['screen-form','screen-success'].forEach(s => {
+    document.getElementById(s).style.display = 'none';
+  });
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.classList.remove('screen'); void el.offsetWidth; el.classList.add('screen');
+}
+
+function resetApp() {
+  document.getElementById('user-select').value = "";
+  pctValues = {}; hrsValues = {};
+  buildRows();
+  updatePctTotal(); updateHrsTotal();
+  show('screen-form');
+}
+
+// ── TAG ───────────────────────────────────────────────────────────────────
+function tagFor(key) {
+  if (DEALFLOW.includes(key))   return 'deal';
+  if (ORIG_CHANNELS.includes(key)) return 'orig';
+  if (LONGTAIL_DEALS.includes(key)) return 'longtail';
+  if (key === 'Other') return 'longtail';
+  if (INTERNAL.includes(key))   return 'internal';
+  if (PORTFOLIO.includes(key))  return 'portco';
+  if (ADMIN_LEAVE.includes(key)) return 'internal'; // <-- ADD THIS
+  return 'deal';
+}
+
+function getTypeForKey(key) {
+  if (DEALFLOW.includes(key))        return 'deal';
+  if (LONGTAIL_DEALS.includes(key))  return 'longtail';
+  if (key === 'Other')               return 'longtail';
+  if (ORIG_CHANNELS.includes(key))   return 'orig';
+  if (INTERNAL.includes(key))        return 'internal';
+  if (PORTFOLIO.includes(key))       return 'portco';
+  if (ADMIN_LEAVE.includes(key))     return 'internal'; // <-- ADD THIS
+  return 'deal';
+}
+function labelFor(key) {
+  return { deal:'DEAL', orig:'ORIG', longtail:'LONGTAIL', internal:'INT', portco:'PORTCO' }[tagFor(key)];
+}
+
+// ── BUILD ROWS ────────────────────────────────────────────────────────────
+function buildRows() {
+  const container = document.getElementById('rows-container');
+  container.innerHTML = '';
+
+  const addSection = (label) => {
+    const div = document.createElement('div');
+    div.className = 'category-row';
+    div.innerHTML = `
+      <div class="category-cell">${label}</div>
+      <div class="category-cell shaded-pct"></div>
+      <div class="category-cell shaded-hrs"></div>`;
+    container.appendChild(div);
+  };
+
+  const addRow = (key, target = null, indent = false) => {
+    const tag  = tagFor(key);
+    const lbl  = labelFor(key);
+    const pct  = pctValues[key] !== undefined ? pctValues[key] : '';
+    const hrs  = hrsValues[key] !== undefined ? hrsValues[key] : '';
+
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'data-row';
+    
+    const indentHtml = indent ? '<span style="color:var(--muted);font-size:10px;margin-right:6px;">↳</span>' : '';
+    
+    rowDiv.innerHTML = `
+      <div class="row-label-cell" style="${indent ? 'padding-left: 16px;' : ''}">
+        ${indentHtml}${key}<span class="row-tag ${tag}">${lbl}</span>
+      </div>
+      <div class="row-input-cell pct-col">
+        <input class="num-input pct-input" type="number" min="0" max="100" step="0.5"
+          value="${pct}" placeholder="—" data-key="${key}" oninput="onPctInput(this)" />
+      </div>
+      <div class="row-input-cell hrs-col">
+        <input class="num-input hrs-input" type="number" min="0" step="0.5"
+          value="${hrs}" placeholder="—" data-key="${key}" oninput="onHrsInput(this)" />
+      </div>`;
+      
+    (target || container).appendChild(rowDiv);
+  };
+
+  const addGroup = (title, items, tagClass, tagLabel) => {
+    const isOpen = items.some(item => (pctValues[item] > 0 || hrsValues[item] > 0)) || (pctValues['Other'] > 0 || hrsValues['Other'] > 0);
+    const expandId = 'expand-' + title.toLowerCase();
+
+    const groupHeader = document.createElement('div');
+    groupHeader.className = 'data-row';
+    groupHeader.style.cursor = 'pointer';
+    groupHeader.style.background = 'rgba(0,0,0,0.02)';
+    groupHeader.onclick = () => document.getElementById(expandId).classList.toggle('open');
+    groupHeader.innerHTML = `
+      <div class="row-label-cell" style="font-weight: 500;">
+        ${title} <span class="row-tag ${tagClass}">${tagLabel}</span>
+        <span style="font-size:9px; color:var(--muted); margin-left:8px;">▼ CLICK TO EXPAND</span>
+      </div>
+      <div class="row-input-cell pct-col"></div>
+      <div class="row-input-cell hrs-col"></div>
+    `;
+    container.appendChild(groupHeader);
+
+    const expandWrap = document.createElement('div');
+    expandWrap.className = 'expand-wrap' + (isOpen ? ' open' : '');
+    expandWrap.id = expandId;
+    
+    const innerDiv = document.createElement('div');
+    innerDiv.style.borderLeft = `2px solid var(--${tagClass}-fg)`;
+    innerDiv.style.marginLeft = '8px';
+    innerDiv.style.background = '#fafaf9';
+    
+    items.forEach(item => addRow(item, innerDiv, true));
+    if (title === 'Longtail') addRow('Other', innerDiv, true); 
+
+    expandWrap.appendChild(innerDiv);
+    container.appendChild(expandWrap);
+  };
+
+  addSection('Dealflow');
+  const dealScroll = document.createElement('div');
+  dealScroll.className = 'scroll-rows-wrap';
+  DEALFLOW.forEach(d => addRow(d, dealScroll));
+  if (DEALFLOW.length) container.appendChild(dealScroll);
+  
+  addGroup('Longtail', LONGTAIL_DEALS, 'longtail', 'LONGTAIL');
+  addGroup('Origination', ORIG_CHANNELS, 'orig', 'ORIG');
+
+  addSection('Internal');
+  INTERNAL.forEach(i => addRow(i));
+
+  addSection('Portfolio');
+  PORTFOLIO.forEach(p => addRow(p));
+
+  // NEW SECTION AT THE VERY BOTTOM
+  addSection('Time Off & Training');
+  ADMIN_LEAVE.forEach(a => addRow(a));
+}
+
+// ── INPUTS ────────────────────────────────────────────────────────────────
+function onPctInput(el) {
+  pctValues[el.dataset.key] = parseFloat(el.value) || 0;
+  updatePctTotal();
+}
+function onHrsInput(el) {
+  hrsValues[el.dataset.key] = parseFloat(el.value) || 0;
+  updateHrsTotal();
+}
+
+function updatePctTotal() {
+  const total   = Object.values(pctValues).reduce((a,b) => a+b, 0);
+  const rounded = Math.round(total * 10) / 10;
+  const elT  = document.getElementById('pct-total');
+  const bar  = document.getElementById('pct-bar');
+  const hint = document.getElementById('pct-hint');
+
+  elT.textContent = `${rounded}%`;
+  bar.style.width = `${Math.min(rounded,100)}%`;
+  elT.className   = 'totals-value ok';
+  bar.className   = 'progress-fill';
+  hint.className  = 'totals-sub';
+
+  if (rounded === 100) {
+    elT.classList.add('done'); bar.classList.add('done'); hint.classList.add('done');
+    hint.textContent = '✓ 100%';
+  } else if (rounded > 100) {
+    elT.classList.add('over'); bar.classList.add('over'); hint.classList.add('over');
+    hint.textContent = `+${(rounded-100).toFixed(1)}% over`;
+  } else {
+    hint.textContent = rounded > 0 ? `${(100-rounded).toFixed(1)}% left` : '—';
+  }
+  document.querySelectorAll('.pct-input').forEach(inp => {
+    inp.classList.toggle('over', rounded > 100);
+  });
+
+  const free = Math.round((100 - rounded) * 10) / 10;
+  const fcEl = document.getElementById('free-pct');
+  fcEl.textContent = `${free}%`;
+  fcEl.className = 'free-cap-value pct-col ' + (free > 0 ? 'positive' : free === 0 ? 'zero' : 'negative');
+}
+
+function updateHrsTotal() {
+  const total   = Object.values(hrsValues).reduce((a,b) => a+b, 0);
+  const rounded = Math.round(total * 10) / 10;
+  document.getElementById('hrs-total').textContent = `${rounded} hrs`;
+  const hint = document.getElementById('hrs-hint');
+  hint.textContent = rounded > 0 ? `≈ ${(rounded/5).toFixed(1)} / day` : ' ';
+
+  const freeHrs = Math.round((40 - rounded) * 10) / 10;
+  const fcEl = document.getElementById('free-hrs');
+  if (rounded === 0) {
+    fcEl.textContent = '—';
+    fcEl.className = 'free-cap-value hrs-col zero';
+  } else {
+    fcEl.textContent = `${freeHrs > 0 ? freeHrs : 0} hrs`;
+    fcEl.className = 'free-cap-value hrs-col ' + (freeHrs > 0 ? 'positive' : freeHrs === 0 ? 'zero' : 'negative');
+  }
+}
+
+// ── SUBMIT ────────────────────────────────────────────────────────────────
+async function submitForm() {
+  const submitBtn = document.querySelector('.btn-primary');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Saving…';
+
+  const user = document.getElementById('user-select').value;
+  if (!user) {
+    alert("Please select your name before submitting.");
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit log →';
+    return;
+  }
+
+  const weekStart = getMondayISO();
+  
+  const allKeysToSubmit = [
+    ...DEALFLOW, 
+    ...LONGTAIL_DEALS, 'Other', // Swapped order here too just to be neat
+    ...ORIG_CHANNELS, 
+    ...INTERNAL, 
+    ...PORTFOLIO,
+    ...ADMIN_LEAVE // <-- ADD THIS
+  ];
+
+  const rows = [];
+  for (const key of allKeysToSubmit) {
+    const pct = parseFloat(pctValues[key]) || 0;
+    const hrs = parseFloat(hrsValues[key]) || 0;
+    if (pct || hrs) {
+      rows.push({
+        user_name:     user,
+        week_start:    weekStart,
+        category_key:  key,
+        category_type: getTypeForKey(key),
+        pct_expected:  pct,
+        hrs_actual:    hrs,
+      });
+    }
+  }
+
+  if (rows.length) {
+    const { error } = await sb.from('ReportingNz_time_entries')
+      .upsert(rows, { onConflict: 'user_name,week_start,category_key' });
+    if (error) {
+      alert('Save failed: ' + error.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit log →';
+      return;
+    }
+  }
+
+  const totalHrs = allKeysToSubmit.reduce((a,k) => a + (hrsValues[k]||0), 0);
+  document.getElementById('success-sub').textContent =
+    `Nice work, ${user}. Your time log for ${getWeekLabel()} has been recorded.`;
+
+  const sections = [
+    { label:'Dealflow',  keys:[...DEALFLOW, ...LONGTAIL_DEALS, 'Other', ...ORIG_CHANNELS] },
+    { label:'Internal',  keys:INTERNAL },
+    { label:'Portfolio', keys:PORTFOLIO },
+    { label:'Time Off & Training', keys:ADMIN_LEAVE }, // <-- ADD THIS
+  ];
+
+  let html = `<div class="summary-card-header"><span>Summary — ${user}</span><span>${totalHrs} total hrs</span></div>`;
+
+  sections.forEach(sec => {
+    const secRows = sec.keys.filter(k => (hrsValues[k]||0) > 0 || (pctValues[k]||0) > 0);
+    if (!secRows.length) return;
+    html += `<div class="summary-section-label">${sec.label}</div>`;
+    secRows.forEach(k => {
+      const hrs = hrsValues[k] || 0;
+      const pct = pctValues[k] || 0;
+      const tag = tagFor(k); const lbl = labelFor(k);
+
+      html += `<div class="summary-row">
+        <div><span>${k}</span><span class="row-tag ${tag}" style="margin-left:5px;">${lbl}</span></div>
+        <div class="summary-row-vals"><span>${pct}%</span><span>${hrs} hrs</span></div>
+      </div>`;
+    });
+  });
+
+  document.getElementById('summary-card').innerHTML = html;
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Submit log →';
+  show('screen-success');
+}
+
+// ── POPULATE USER SELECT ──────────────────────────────────────────────────
+function populateUserSelect() {
+  const sel = document.getElementById('user-select');
+  sel.onchange = (e) => loadUserEntries(e.target.value);
+  
+  while (sel.options.length > 1) sel.remove(1);
+  TEAM_MEMBERS.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name; opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+document.getElementById('week-label').textContent = getWeekLabel();
+updatePctTotal();
+updateHrsTotal();
+loadDeals().then(() => {
+  populateUserSelect();
+  buildRows();
+}).catch(err => {
+  console.error('Failed to load deals:', err);
+  buildRows();
+});
+</script>
+</body>
 </html>

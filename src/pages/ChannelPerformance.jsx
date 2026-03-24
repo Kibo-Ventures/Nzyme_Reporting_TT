@@ -31,6 +31,8 @@ function PivotToggle({ options, value, onChange }) {
         <button
           key={opt.key}
           onClick={() => onChange(opt.key)}
+          className="toggle-btn"
+          data-active={value === opt.key ? 'true' : undefined}
           style={{
             padding: '4px 12px',
             fontSize: '0.75rem',
@@ -122,7 +124,7 @@ function ChannelTable({ rows }) {
   }
 
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 6 }}>
+    <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 8 }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
         <thead>
           <tr>
@@ -243,7 +245,7 @@ function MemoList({ deals }) {
             style={{
               background: 'none',
               border: '1px solid var(--rule)',
-              borderRadius: 6,
+              borderRadius: 8,
               padding: '5px 16px',
               fontSize: '0.8125rem',
               cursor: 'pointer',
@@ -399,7 +401,7 @@ export default function ChannelPerformance() {
       ) : (
         <>
           {/* Bar chart */}
-          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '20px 24px', marginBottom: 24 }}>
+          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem' }}>Dealflow by Channel</h3>
               <PivotToggle
@@ -453,7 +455,7 @@ export default function ChannelPerformance() {
           </div>
 
           {/* Main channel table */}
-          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '20px 24px', marginBottom: 24 }}>
+          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
             <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', marginBottom: 4 }}>Channel Breakdown</h3>
             <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: 16 }}>
               Click column headers to sort. Total Hours = time logged directly to the channel; Time Invested in Deals = hours on deals attributed to the channel. Avg Cost / Month = total cost ÷ months with logged activity.
@@ -462,7 +464,7 @@ export default function ChannelPerformance() {
           </div>
 
           {/* Quality leads memo */}
-          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 8, padding: '20px 24px' }}>
+          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px' }}>
             <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', marginBottom: 4 }}>Quality Leads</h3>
             <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: 16 }}>
               All High and Medium-High priority leads in the selected period.

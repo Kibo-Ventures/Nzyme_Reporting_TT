@@ -33,7 +33,7 @@ export function StageBadge({ stage, short = false }) {
       style={{
         display: 'inline-block',
         padding: '2px 8px',
-        borderRadius: 4,
+        borderRadius: 9999,
         fontSize: '0.7rem',
         fontWeight: 600,
         background: s.bg,
@@ -53,7 +53,7 @@ export function TierBadge({ tier }) {
       style={{
         display: 'inline-block',
         padding: '2px 8px',
-        borderRadius: 4,
+        borderRadius: 9999,
         fontSize: '0.7rem',
         fontWeight: 600,
         background: t.bg,

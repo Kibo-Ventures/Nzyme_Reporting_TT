@@ -9,10 +9,12 @@
 :root {
   --ink:          #0f0f0f;
   --paper:        #f7f5f0;
-  --muted:        #9a9589;
-  --rule:         #e5e2db;
+  --muted:        #8a8880;
+  --rule:         #e2e6eb;
   --accent:       #1a3a2a;
   --accent-light: #e8f0eb;
+  --accent-vivid: #2d9e6a;
+  --surface:      #ffffff;
   --danger:       #c0392b;
   --portco-bg:    #eef0f8;
   --portco-fg:    #3a4080;
@@ -26,4 +28,32 @@ body {
   background-color: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--rule); border-radius: 3px; }
+::-webkit-scrollbar-thumb  { background: var(--muted); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink); }
+
+/* ── Focus rings ───────────────────────────────────────────────────────────── */
+
+*:focus-visible {
+  outline: 2px solid var(--accent-vivid);
+  outline-offset: 2px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent-vivid) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-vivid) 15%, transparent);
+}
+
+/* ── Toggle button hover ───────────────────────────────────────────────────── */
+
+.toggle-btn:not([data-active="true"]):hover {
+  background: rgba(0, 0, 0, 0.04) !important;
 }

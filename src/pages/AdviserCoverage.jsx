@@ -58,7 +58,8 @@ function PivotToggle({ options, value, onChange }) {
         <button
           key={o}
           onClick={() => onChange(o)}
-          className="px-3 py-1 rounded text-xs font-medium border transition-colors"
+          className="toggle-btn px-3 py-1 rounded-md text-xs font-medium border transition-colors"
+          data-active={value === o ? 'true' : undefined}
           style={{
             background: value === o ? 'var(--accent)' : 'white',
             color:      value === o ? 'white'          : 'var(--ink)',
@@ -82,7 +83,7 @@ function MemoTable({ deals }) {
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--rule)' }}>
+      <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--rule)' }}>
         <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--accent-light)' }}>
@@ -159,7 +160,7 @@ function MemoTable({ deals }) {
 function AdviserGroupTable({ grouped }) {
   // grouped: Map<kam, Map<adviser, { tier, leads, quality }>>
   return (
-    <div className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--rule)' }}>
+    <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--rule)' }}>
       <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ background: 'var(--accent-light)' }}>
@@ -432,7 +433,7 @@ export default function AdviserCoverage() {
       </div>
 
       {/* ── Chart ── */}
-      <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
+      <div className="rounded-xl border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
@@ -480,7 +481,7 @@ export default function AdviserCoverage() {
       </div>
 
       {/* ── Grouped KAM → Adviser table ── */}
-      <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
+      <div className="rounded-xl border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
         <div className="mb-4">
           <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
             Adviser Breakdown by KAM
@@ -503,7 +504,7 @@ export default function AdviserCoverage() {
       </div>
 
       {/* ── Memo table ── */}
-      <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
+      <div className="rounded-xl border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
         <div className="mb-4">
           <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
             LTM Adviser Deal Log

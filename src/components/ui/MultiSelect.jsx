@@ -38,7 +38,7 @@ export default function MultiSelect({ options = [], value = [], onChange, placeh
           color: value.length > 0 ? 'var(--accent)' : 'var(--ink)',
           background: value.length > 0 ? 'var(--accent-light)' : 'white',
           border: '1px solid var(--rule)',
-          borderRadius: '6px',
+          borderRadius: '8px',
           cursor: 'pointer',
           whiteSpace: 'nowrap',
         }}
@@ -58,7 +58,7 @@ export default function MultiSelect({ options = [], value = [], onChange, placeh
             zIndex: 50,
             background: 'white',
             border: '1px solid var(--rule)',
-            borderRadius: '8px',
+            borderRadius: '12px',
             boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
             minWidth: '180px',
             maxHeight: '240px',
@@ -81,7 +81,7 @@ export default function MultiSelect({ options = [], value = [], onChange, placeh
                 padding: '0.375rem 0.75rem',
                 fontSize: '0.8125rem',
                 cursor: 'pointer',
-                borderRadius: '5px',
+                borderRadius: '6px',
                 background: value.includes(opt) ? 'var(--accent-light)' : 'transparent',
                 color: value.includes(opt) ? 'var(--accent)' : 'var(--ink)',
               }}
