@@ -10,7 +10,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 const AXIS_OPTIONS = [
   { value: 'total_hrs',              label: 'Total Hours on Deal' },
   { value: 'funnel_depth',           label: 'Funnel Depth Reached',  domain: [0, 6], tickCount: 7 },
-  { value: 'avg_days_per_stage',     label: 'Avg Days per Stage' },
+  { value: 'avg_days_per_stage',     label: 'Avg Days per Stage',     domain: [0, 350], filterMax: 350 },
   { value: 'deal_lifespan_days',     label: 'Deal Lifespan (days)' },
   { value: 'stage_transition_count', label: 'Number of Stage Transitions' },
   { value: 'equity_required',        label: 'Equity Required (€m)' },
@@ -19,7 +19,7 @@ const AXIS_OPTIONS = [
     tickFormatter: v => ['Pre-checklist', 'Checklist', 'First IC', '2+ ICs'][v] ?? v },
   { value: 'milestone_depth',        label: 'Milestone Depth',       domain: [0, 6], tickCount: 7,
     tickFormatter: v => ['None', 'NDA', 'IM', 'NBO', 'VDR/FAQ', 'MIP', 'TS'][v] ?? v },
-  { value: 'milestone_count',        label: 'Milestone Count' },
+  { value: 'milestone_count',        label: 'Milestone Count',        allowDecimals: false },
 ];
 
 const COLOR_BY_OPTIONS = [
@@ -47,6 +47,12 @@ function resolveColor(key, colorIndex) {
   return STAGE_COLORS[key] ?? FALLBACK_PALETTE[colorIndex % FALLBACK_PALETTE.length];
 }
 
+function fmtVal(v) {
+  if (v == null) return '—';
+  if (typeof v !== 'number') return v;
+  return Number.isInteger(v) ? v : parseFloat(v.toFixed(2));
+}
+
 function ChartTooltip({ active, payload, xAxis, yAxis }) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
@@ -67,8 +73,8 @@ function ChartTooltip({ active, payload, xAxis, yAxis }) {
     }}>
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{d.deal_name}</div>
       <div style={{ color: 'var(--muted)', marginBottom: 6, fontSize: 12 }}>{d.captain}</div>
-      <div>{xLabel}: <strong>{d[xAxis] ?? '—'}</strong></div>
-      <div>{yLabel}: <strong>{d[yAxis] ?? '—'}</strong></div>
+      <div>{xLabel}: <strong>{fmtVal(d[xAxis])}</strong></div>
+      <div>{yLabel}: <strong>{fmtVal(d[yAxis])}</strong></div>
       <div style={{ marginTop: 8 }}>
         <StageBadge stage={d.current_stage} />
       </div>
@@ -98,26 +104,35 @@ export default function DynamicAnalysis() {
 
   const { data = [], isLoading } = useAnalysisDeals();
 
+  // Filter out deals that exceed a filterMax on either selected axis
+  const filteredData = useMemo(() => {
+    return data.filter(deal => {
+      if (xConfig?.filterMax != null && (deal[xAxis] ?? 0) > xConfig.filterMax) return false;
+      if (yConfig?.filterMax != null && (deal[yAxis] ?? 0) > yConfig.filterMax) return false;
+      return true;
+    });
+  }, [data, xAxis, yAxis, xConfig, yConfig]);
+
   // Group deals by the selected color-by field; track insertion order for palette assignment
   const { groups, groupColors } = useMemo(() => {
     const groups = {};
     const order = [];
-    for (const deal of data) {
+    for (const deal of filteredData) {
       const key = deal[colorBy] ?? 'Other';
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(deal);
     }
     const groupColors = Object.fromEntries(order.map((k, i) => [k, resolveColor(k, i)]));
     return { groups, groupColors };
-  }, [data, colorBy]);
+  }, [filteredData, colorBy]);
 
   const sortedData = useMemo(() => {
-    return [...data].sort((a, b) => {
+    return [...filteredData].sort((a, b) => {
       const av = a[sortCol] ?? 0;
       const bv = b[sortCol] ?? 0;
       return sortDir === 'asc' ? av - bv : bv - av;
     });
-  }, [data, sortCol, sortDir]);
+  }, [filteredData, sortCol, sortDir]);
 
   const handleSort = (col) => {
     if (col === sortCol) {
@@ -191,7 +206,7 @@ export default function DynamicAnalysis() {
           </label>
 
           <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 'auto', fontFamily: 'var(--font-sans)' }}>
-            {data.length} deals plotted
+            {filteredData.length} deals plotted
           </span>
         </div>
 
@@ -201,7 +216,7 @@ export default function DynamicAnalysis() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={420}>
-            <ScatterChart margin={{ top: 10, right: 20, bottom: 40, left: 10 }}>
+            <ScatterChart margin={{ top: 10, right: 20, bottom: xConfig?.tickFormatter ? 70 : 40, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" />
               <XAxis
                 dataKey={xAxis}
@@ -209,11 +224,12 @@ export default function DynamicAnalysis() {
                 type="number"
                 domain={xConfig?.domain ?? ['auto', 'auto']}
                 tickCount={xConfig?.tickCount}
+                allowDecimals={xConfig?.allowDecimals ?? true}
                 allowDataOverflow={false}
                 label={{
                   value: xConfig?.label,
                   position: 'insideBottom',
-                  offset: -10,
+                  offset: xConfig?.tickFormatter ? -28 : -10,
                   style: { fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--muted)' },
                 }}
                 tickFormatter={xConfig?.tickFormatter}
@@ -225,11 +241,14 @@ export default function DynamicAnalysis() {
                 type="number"
                 domain={yConfig?.domain ?? ['auto', 'auto']}
                 tickCount={yConfig?.tickCount}
+                allowDecimals={yConfig?.allowDecimals ?? true}
                 allowDataOverflow={false}
+                width={yConfig?.tickFormatter ? 100 : 60}
                 label={{
                   value: yConfig?.label,
                   angle: -90,
                   position: 'insideLeft',
+                  dx: yConfig?.tickFormatter ? 14 : 0,
                   style: { fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--muted)' },
                 }}
                 tickFormatter={yConfig?.tickFormatter}
@@ -258,7 +277,7 @@ export default function DynamicAnalysis() {
       </div>
 
       {/* Deal detail table */}
-      {!isLoading && data.length > 0 && (
+      {!isLoading && filteredData.length > 0 && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px' }}>
           <h3 style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '1.0625rem', marginBottom: 16, color: 'var(--ink)' }}>
             Deal Breakdown
