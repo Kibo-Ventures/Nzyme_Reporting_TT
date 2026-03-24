@@ -9,12 +9,12 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const AXIS_OPTIONS = [
   { value: 'total_hrs',              label: 'Total Hours on Deal' },
-  { value: 'funnel_depth',           label: 'Funnel Depth Reached' },
+  { value: 'funnel_depth',           label: 'Funnel Depth Reached',  domain: [0, 6], tickCount: 7 },
   { value: 'avg_days_per_stage',     label: 'Avg Days per Stage' },
   { value: 'deal_age_days',          label: 'Deal Age (days)' },
   { value: 'stage_transition_count', label: 'Number of Stage Transitions' },
-  { value: 'equity_required',        label: 'Equity Required (€)' },
-  { value: 'attractiveness_score',   label: 'Attractiveness Score' },
+  { value: 'equity_required',        label: 'Equity Required (€m)' },
+  { value: 'attractiveness_score',   label: 'Attractiveness Score',  domain: [0, 5], tickCount: 6 },
 ];
 
 const COLOR_BY_OPTIONS = [
@@ -125,6 +125,9 @@ export default function DynamicAnalysis() {
 
   const tableRows = showAll ? sortedData : sortedData.slice(0, 8);
 
+  const xConfig = AXIS_OPTIONS.find(o => o.value === xAxis);
+  const yConfig = AXIS_OPTIONS.find(o => o.value === yAxis);
+
   const TABLE_COLS = [
     { col: 'deal_name',            label: 'Deal' },
     { col: 'captain',              label: 'Captain' },
@@ -195,10 +198,13 @@ export default function DynamicAnalysis() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" />
               <XAxis
                 dataKey={xAxis}
-                name={AXIS_OPTIONS.find(o => o.value === xAxis)?.label}
+                name={xConfig?.label}
                 type="number"
+                domain={xConfig?.domain ?? ['auto', 'auto']}
+                tickCount={xConfig?.tickCount}
+                allowDataOverflow={false}
                 label={{
-                  value: AXIS_OPTIONS.find(o => o.value === xAxis)?.label,
+                  value: xConfig?.label,
                   position: 'insideBottom',
                   offset: -10,
                   style: { fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--muted)' },
@@ -207,10 +213,13 @@ export default function DynamicAnalysis() {
               />
               <YAxis
                 dataKey={yAxis}
-                name={AXIS_OPTIONS.find(o => o.value === yAxis)?.label}
+                name={yConfig?.label}
                 type="number"
+                domain={yConfig?.domain ?? ['auto', 'auto']}
+                tickCount={yConfig?.tickCount}
+                allowDataOverflow={false}
                 label={{
-                  value: AXIS_OPTIONS.find(o => o.value === yAxis)?.label,
+                  value: yConfig?.label,
                   angle: -90,
                   position: 'insideLeft',
                   style: { fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--muted)' },
