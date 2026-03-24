@@ -136,7 +136,7 @@ function TimeInvestedTable({ stages, timeByStage }) {
     <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 8 }}>
       <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ background: '#fafaf8' }}>
+          <tr style={{ background: '#f5f7fa' }}>
             {['Stage', 'Total Hours', 'Avg Hrs to Progress', 'Deals with Hours'].map((h, i) => (
               <th
                 key={h}
@@ -170,7 +170,7 @@ function TimeInvestedTable({ stages, timeByStage }) {
                   onClick={() => setExpandedStage(isExpanded ? null : s.stage_value)}
                   style={{
                     borderBottom: isExpanded ? 'none' : '1px solid var(--rule)',
-                    background: isExpanded ? '#fffef9' : i % 2 === 0 ? 'white' : '#fafaf8',
+                    background: isExpanded ? '#f8fafb' : i % 2 === 0 ? 'white' : '#f5f7fa',
                     cursor: ti ? 'pointer' : 'default',
                   }}
                 >
@@ -204,7 +204,7 @@ function TimeInvestedTable({ stages, timeByStage }) {
                 </tr>
                 {isExpanded && ti && (
                   <tr key={`${s.stage_value}-expand`} style={{ borderBottom: '1px solid var(--rule)' }}>
-                    <td colSpan={4} style={{ padding: '0 0 8px 0', background: '#fffef9' }}>
+                    <td colSpan={4} style={{ padding: '0 0 8px 0', background: '#f8fafb' }}>
                       <div style={{ padding: '8px 16px 4px 40px', display: 'flex', flexWrap: 'wrap', gap: '6px 24px' }}>
                         {ti.deals.map(d => (
                           <div key={d.name} style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 200 }}>
@@ -514,7 +514,7 @@ export default function FunnelAnalysis() {
                     onClick={() => setSelectedStage(isSelected ? null : s.stage_value)}
                     style={{
                       borderBottom: '1px solid var(--rule)',
-                      background:   isSelected ? 'var(--accent-light)' : i % 2 === 0 ? 'white' : '#fafaf8',
+                      background:   isSelected ? 'var(--accent-light)' : i % 2 === 0 ? 'white' : '#f5f7fa',
                       cursor:       'pointer',
                     }}
                     className="hover:bg-[var(--accent-light)] transition-colors"

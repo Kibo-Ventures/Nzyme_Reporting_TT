@@ -117,7 +117,7 @@ function ChannelTable({ rows }) {
     letterSpacing: '0.06em',
     color: 'var(--muted)',
     borderBottom: '2px solid var(--rule)',
-    background: '#fafaf8',
+    background: '#f5f7fa',
     whiteSpace: 'nowrap',
     cursor: 'pointer',
     userSelect: 'none',
@@ -142,7 +142,7 @@ function ChannelTable({ rows }) {
         </thead>
         <tbody>
           {sorted.map((row, i) => (
-            <tr key={row.channel} style={{ background: i % 2 === 0 ? 'white' : '#fafaf9' }}>
+            <tr key={row.channel} style={{ background: i % 2 === 0 ? 'white' : '#f5f7fa' }}>
               <td style={{ padding: '9px 10px', fontWeight: 600, fontSize: '0.8125rem', borderBottom: '1px solid var(--rule)', whiteSpace: 'nowrap' }}>
                 {row.channel}
               </td>
@@ -417,7 +417,7 @@ export default function ChannelPerformance() {
             <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: 20 }}>{chartDesc}</p>
             <ResponsiveContainer width="100%" height={chartHeight}>
               <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 56, bottom: 4, left: 8 }}>
-                <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#d4dce8" />
                 <XAxis
                   type="number"
                   allowDecimals={chartPivot === 'cost'}

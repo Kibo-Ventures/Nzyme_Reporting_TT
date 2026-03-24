@@ -224,7 +224,7 @@ function DrilldownTable({ deals }) {
     letterSpacing: '0.06em',
     color: 'var(--muted)',
     borderBottom: '2px solid var(--rule)',
-    background: '#fafaf8',
+    background: '#f5f7fa',
     whiteSpace: 'nowrap',
     cursor: 'pointer',
     userSelect: 'none',
@@ -254,7 +254,7 @@ function DrilldownTable({ deals }) {
               </tr>
             )}
             {visible.map((deal, i) => (
-              <tr key={deal.name + i} style={{ background: i % 2 === 0 ? 'white' : '#fafaf9' }}>
+              <tr key={deal.name + i} style={{ background: i % 2 === 0 ? 'white' : '#f5f7fa' }}>
                 <td style={{ padding: '8px 10px', fontSize: '0.8rem', fontWeight: 600, borderBottom: '1px solid var(--rule)' }}>
                   {deal.name}
                 </td>
@@ -412,7 +412,7 @@ export default function ProprietaryDealflow() {
             >
               <ResponsiveContainer width="100%" height={kamHeight}>
                 <BarChart data={kamData} layout="vertical" margin={{ top: 4, right: 48, bottom: 4, left: 8 }}>
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#d4dce8" />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }} axisLine={false} tickLine={false} />
                   <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }} axisLine={false} tickLine={false} />
                   <Tooltip formatter={(v) => [v, kamPivot === 'volume' ? 'Deals' : 'Quality Leads']} contentStyle={{ fontSize: 12 }} />
@@ -455,7 +455,7 @@ export default function ProprietaryDealflow() {
                 return (
                   <ResponsiveContainer width="100%" height={Math.max(120, 40 + pivotData.length * 40)}>
                     <BarChart data={pivotData} layout="vertical" margin={{ top: 4, right: 48, bottom: 4, left: 8 }}>
-                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#d4dce8" />
                       <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }} axisLine={false} tickLine={false} />
                       <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={{ fontSize: 12 }} />
@@ -473,7 +473,7 @@ export default function ProprietaryDealflow() {
                   data={stageBarData}
                   margin={{ top: 4, right: 48, bottom: 4, left: 130 }}
                 >
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#d4dce8" />
                   <YAxis
                     dataKey="name"
                     type="category"

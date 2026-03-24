@@ -347,7 +347,7 @@ function DenseTable({ headers, rows, footerRow, groupRows }) {
                   fontFamily: 'var(--font-sans)',
                   fontWeight: 600,
                   color: 'var(--muted)',
-                  background: '#fafaf8',
+                  background: '#f5f7fa',
                   position: i === 0 ? 'sticky' : undefined,
                   left: i === 0 ? 0 : undefined,
                   zIndex: i === 0 ? 1 : undefined,
@@ -378,7 +378,7 @@ function DenseTable({ headers, rows, footerRow, groupRows }) {
                       textTransform: isGroup && ci === 0 ? 'uppercase' : undefined,
                       letterSpacing: isGroup && ci === 0 ? '0.05em' : undefined,
                       fontSize: isGroup && ci === 0 ? 10 : undefined,
-                      background: isGroup ? '#f4f3ef' : ci === row.length - 1 ? '#fafaf8' : undefined,
+                      background: isGroup ? '#eef1f5' : ci === row.length - 1 ? '#f5f7fa' : undefined,
                       position: ci === 0 ? 'sticky' : undefined,
                       left: ci === 0 ? 0 : undefined,
                       zIndex: ci === 0 ? 1 : undefined,
@@ -401,7 +401,7 @@ function DenseTable({ headers, rows, footerRow, groupRows }) {
                     fontFamily: ci === 0 ? 'var(--font-sans)' : 'var(--font-mono)',
                     fontWeight: 500,
                     color: 'var(--muted)',
-                    background: '#fafaf8',
+                    background: '#f5f7fa',
                     borderTop: '2px solid var(--rule)',
                     textAlign: ci === 0 ? 'left' : 'right',
                     whiteSpace: 'nowrap',
@@ -583,7 +583,7 @@ export default function TeamAnalytics() {
               ) : (
                 <ResponsiveContainer width="100%" height={capHeight}>
                   <BarChart data={capacityData} margin={{ top: 20, right: 16, bottom: 52, left: 10 }}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#d4dce8" />
                     <XAxis
                       dataKey="name"
                       tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
@@ -642,7 +642,7 @@ export default function TeamAnalytics() {
               ) : (
                 <ResponsiveContainer width="100%" height={fteHeight}>
                   <BarChart data={fteData} layout="vertical" margin={{ top: 4, right: 60, bottom: 8, left: 8 }}>
-                    <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#d4dce8" />
                     <XAxis
                       type="number"
                       tickFormatter={v => `${v} FTE`}
@@ -702,7 +702,7 @@ export default function TeamAnalytics() {
             ) : (
               <ResponsiveContainer width="100%" height={lifeHeight}>
                 <BarChart data={lifetimeData} layout="vertical" margin={{ top: 4, right: 64, bottom: 8, left: 8 }}>
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e2db" />
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#d4dce8" />
                   <XAxis
                     type="number"
                     tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}

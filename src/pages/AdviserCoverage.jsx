@@ -104,7 +104,7 @@ function MemoTable({ deals }) {
                 key={d.deal_id ?? i}
                 style={{
                   borderBottom: '1px solid var(--rule)',
-                  background: i % 2 === 0 ? 'white' : '#fafaf8',
+                  background: i % 2 === 0 ? 'white' : '#f5f7fa',
                 }}
               >
                 <td className="px-3 py-2 font-medium" style={{ color: 'var(--ink)' }}>
@@ -184,7 +184,7 @@ function AdviserGroupTable({ grouped }) {
                   key={`${kam}|${adviser}`}
                   style={{
                     borderBottom: '1px solid var(--rule)',
-                    background: (ki + ai) % 2 === 0 ? 'white' : '#fafaf8',
+                    background: (ki + ai) % 2 === 0 ? 'white' : '#f5f7fa',
                   }}
                 >
                   <td className="px-3 py-2 font-medium" style={{ color: 'var(--ink)' }}>

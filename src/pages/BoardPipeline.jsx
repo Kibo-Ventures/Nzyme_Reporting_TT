@@ -85,7 +85,7 @@ function DealDetail({ deal }) {
       style={{
         margin: '0 0 4px 0',
         padding: '16px 20px',
-        background: '#fafaf8',
+        background: '#f5f7fa',
         borderTop: '1px solid var(--rule)',
         borderRadius: '0 0 12px 12px',
         boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.04)',
@@ -126,7 +126,7 @@ function DealRow({ deal, expanded, onToggle }) {
     <div
       style={{
         borderBottom: expanded ? 'none' : '1px solid var(--rule)',
-        background: expanded ? '#fffef9' : 'white',
+        background: expanded ? '#f8fafb' : 'white',
       }}
     >
       {/* Main row */}
@@ -141,7 +141,7 @@ function DealRow({ deal, expanded, onToggle }) {
           borderBottom: expanded ? '1px solid var(--rule)' : 'none',
           transition: 'background 0.1s',
         }}
-        onMouseEnter={e => { if (!expanded) e.currentTarget.style.background = '#fafaf8' }}
+        onMouseEnter={e => { if (!expanded) e.currentTarget.style.background = '#f5f7fa' }}
         onMouseLeave={e => { if (!expanded) e.currentTarget.style.background = 'white' }}
       >
         {/* Expand chevron */}

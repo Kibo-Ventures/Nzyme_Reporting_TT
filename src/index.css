@@ -2,17 +2,17 @@
 
 @theme {
   --font-serif: "DM Serif Display", serif;
-  --font-sans: "DM Sans", sans-serif;
-  --font-mono: "DM Mono", monospace;
+  --font-sans: "Outfit", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
 }
 
 :root {
-  --ink:          #0f0f0f;
-  --paper:        #f7f5f0;
-  --muted:        #8a8880;
-  --rule:         #e2e6eb;
-  --accent:       #1a3a2a;
-  --accent-light: #e8f0eb;
+  --ink:          #1a2a4a;
+  --paper:        #fafafa;
+  --muted:        #6b7589;
+  --rule:         #d4dce8;
+  --accent:       #2d9e6a;
+  --accent-light: #e6f7f0;
   --accent-vivid: #2d9e6a;
   --surface:      #ffffff;
   --danger:       #c0392b;
