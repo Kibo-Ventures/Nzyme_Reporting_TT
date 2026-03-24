@@ -104,6 +104,9 @@ export default function DynamicAnalysis() {
 
   const { data = [], isLoading } = useAnalysisDeals();
 
+  const xConfig = AXIS_OPTIONS.find(o => o.value === xAxis);
+  const yConfig = AXIS_OPTIONS.find(o => o.value === yAxis);
+
   // Filter out deals that exceed a filterMax on either selected axis
   const filteredData = useMemo(() => {
     return data.filter(deal => {
@@ -144,9 +147,6 @@ export default function DynamicAnalysis() {
   };
 
   const tableRows = showAll ? sortedData : sortedData.slice(0, 8);
-
-  const xConfig = AXIS_OPTIONS.find(o => o.value === xAxis);
-  const yConfig = AXIS_OPTIONS.find(o => o.value === yAxis);
 
   const TABLE_COLS = [
     { col: 'deal_name',            label: 'Deal' },
