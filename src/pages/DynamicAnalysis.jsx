@@ -11,7 +11,7 @@ const AXIS_OPTIONS = [
   { value: 'total_hrs',              label: 'Total Hours on Deal' },
   { value: 'funnel_depth',           label: 'Funnel Depth Reached',  domain: [0, 6], tickCount: 7 },
   { value: 'avg_days_per_stage',     label: 'Avg Days per Stage' },
-  { value: 'deal_age_days',          label: 'Deal Age (days)' },
+  { value: 'deal_lifespan_days',     label: 'Deal Lifespan (days)' },
   { value: 'stage_transition_count', label: 'Number of Stage Transitions' },
   { value: 'equity_required',        label: 'Equity Required (€m)' },
   { value: 'attractiveness_score',   label: 'Attractiveness Score',  domain: [0, 5], tickCount: 6 },
@@ -135,7 +135,7 @@ export default function DynamicAnalysis() {
     { col: 'channel_label',        label: 'Channel' },
     { col: 'total_hrs',            label: 'Hrs' },
     { col: 'avg_days_per_stage',   label: 'Avg Days/Stage' },
-    { col: 'deal_age_days',        label: 'Age (days)' },
+    { col: 'deal_lifespan_days',   label: 'Lifespan (days)' },
     { col: 'equity_required',      label: 'Equity (€)' },
     { col: 'attractiveness_score', label: 'Attract. Score' },
   ];
@@ -293,7 +293,7 @@ export default function DynamicAnalysis() {
                   <td style={{ padding: '9px 10px', color: 'var(--muted)', fontSize: 12 }}>{d.channel_label ?? '—'}</td>
                   <td style={numCell}>{d.total_hrs ?? '—'}</td>
                   <td style={numCell}>{d.avg_days_per_stage != null ? Number(d.avg_days_per_stage).toFixed(1) : '—'}</td>
-                  <td style={numCell}>{d.deal_age_days ?? '—'}</td>
+                  <td style={numCell}>{d.deal_lifespan_days ?? '—'}</td>
                   <td style={numCell}>{d.equity_required != null ? `€${(d.equity_required / 1e6).toFixed(1)}m` : '—'}</td>
                   <td style={numCell}>{d.attractiveness_score != null ? Number(d.attractiveness_score).toFixed(1) : '—'}</td>
                 </tr>
