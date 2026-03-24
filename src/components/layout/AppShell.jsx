@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import FilterBar from './FilterBar'
+import { AiChatPanel } from '../chat/AiChatPanel'
 
 export default function AppShell() {
   const { pathname } = useLocation()
@@ -15,6 +16,7 @@ export default function AppShell() {
         {showFilters && <FilterBar disableDateRange={disableDateRange} hideChannel={hideChannel} />}
         <Outlet />
       </main>
+      {!pathname.startsWith('/timetracker') && <AiChatPanel />}
     </div>
   )
 }
