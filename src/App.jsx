@@ -8,6 +8,7 @@ import ProprietaryDealflow from './pages/ProprietaryDealflow'
 import ChannelPerformance from './pages/ChannelPerformance'
 import AdviserCoverage from './pages/AdviserCoverage'
 import FunnelAnalysis from './pages/FunnelAnalysis'
+import DynamicAnalysis from './pages/DynamicAnalysis'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/channels"     element={<ChannelPerformance />} />
           <Route path="/advisers"     element={<AdviserCoverage />} />
           <Route path="/funnel"       element={<FunnelAnalysis />} />
+          <Route path="/analysis"     element={<DynamicAnalysis />} />
           <Route path="*"             element={<Navigate to="/timetracker" replace />} />
         </Route>
       </Routes>

@@ -9,6 +9,7 @@ const navItems = [
   { to: '/channels',    label: 'Channels',            icon: '📊', group: 'REPORTING' },
   { to: '/advisers',    label: 'Adviser Coverage',    icon: '🤝', group: 'REPORTING' },
   { to: '/funnel',      label: 'Funnel Analysis',     icon: '🔽', group: 'REPORTING' },
+  { to: '/analysis',   label: 'Dynamic Analysis',    icon: '⬡', group: 'REPORTING' },
 ]
 
 export default function Sidebar() {
