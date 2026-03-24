@@ -344,7 +344,7 @@ export default function BoardPipeline() {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
       {/* Header */}
-      <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', marginBottom: '1.5rem' }}>
+      <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '1.5rem' }}>
         Board Pipeline
       </h1>
 

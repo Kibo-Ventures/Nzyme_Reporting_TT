@@ -381,7 +381,7 @@ export default function ChannelPerformance() {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-      <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', marginBottom: '1.5rem' }}>
+      <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '1.5rem' }}>
         Channel Performance
       </h1>
 
@@ -403,7 +403,7 @@ export default function ChannelPerformance() {
           {/* Bar chart */}
           <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem' }}>Dealflow by Channel</h3>
+              <h3 style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '1.0625rem' }}>Dealflow by Channel</h3>
               <PivotToggle
                 value={chartPivot}
                 onChange={setChartPivot}
@@ -456,7 +456,7 @@ export default function ChannelPerformance() {
 
           {/* Main channel table */}
           <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
-            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', marginBottom: 4 }}>Channel Breakdown</h3>
+            <h3 style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '1.0625rem', marginBottom: 4 }}>Channel Breakdown</h3>
             <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: 16 }}>
               Click column headers to sort. Total Hours = time logged directly to the channel; Time Invested in Deals = hours on deals attributed to the channel. Avg Cost / Month = total cost ÷ months with logged activity.
             </p>
@@ -465,7 +465,7 @@ export default function ChannelPerformance() {
 
           {/* Quality leads memo */}
           <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px' }}>
-            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', marginBottom: 4 }}>Quality Leads</h3>
+            <h3 style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '1.0625rem', marginBottom: 4 }}>Quality Leads</h3>
             <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: 16 }}>
               All High and Medium-High priority leads in the selected period.
             </p>

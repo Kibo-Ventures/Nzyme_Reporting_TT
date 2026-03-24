@@ -51,13 +51,8 @@ export default function Sidebar() {
         style={{ borderColor: 'var(--rule)', background: 'var(--paper)' }}
       >
         {/* Logo */}
-        <div className="px-4 py-4 border-b" style={{ borderColor: 'var(--rule)' }}>
-          <span className="text-xs font-semibold tracking-widest uppercase" style={{ color: 'var(--muted)' }}>
-            PE
-          </span>
-          <div className="font-serif text-base mt-0.5" style={{ fontFamily: 'var(--font-serif)' }}>
-            Kibo Ventures
-          </div>
+        <div className="px-4 py-3 border-b flex items-center" style={{ borderColor: 'var(--rule)' }}>
+          <img src="/nzyme-logo.png" alt="Nzyme" style={{ height: 32, width: 'auto' }} />
         </div>
 
         {/* Nav */}

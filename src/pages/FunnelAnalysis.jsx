@@ -363,8 +363,8 @@ export default function FunnelAnalysis() {
       {/* ── Header ── */}
       <div>
         <h1
-          className="text-2xl font-serif mb-1"
-          style={{ fontFamily: 'var(--font-serif)', color: 'var(--ink)' }}
+          className="text-2xl mb-1"
+          style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, color: 'var(--ink)' }}
         >
           Funnel Analysis
         </h1>

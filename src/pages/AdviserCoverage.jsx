@@ -385,7 +385,7 @@ export default function AdviserCoverage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-serif mb-1" style={{ fontFamily: 'var(--font-serif)', color: 'var(--ink)' }}>
+          <h1 className="text-2xl mb-1" style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, color: 'var(--ink)' }}>
             Adviser Coverage
           </h1>
           <p className="text-sm" style={{ color: 'var(--muted)' }}>

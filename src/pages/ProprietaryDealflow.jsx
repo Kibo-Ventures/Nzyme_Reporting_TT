@@ -98,7 +98,7 @@ function ChartCard({ title, description, action, children, style = {} }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
-        <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem' }}>{title}</h3>
+        <h3 style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '1.0625rem' }}>{title}</h3>
         {action}
       </div>
       {description && (
@@ -358,7 +358,7 @@ export default function ProprietaryDealflow() {
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-      <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', marginBottom: '1.5rem' }}>
+      <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '1.5rem' }}>
         Proprietary Dealflow
       </h1>
 
@@ -380,7 +380,7 @@ export default function ProprietaryDealflow() {
           <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 20, marginBottom: 24 }}>
             {/* Donut card */}
             <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 16px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '0.9375rem', marginBottom: 2, textAlign: 'center' }}>
+              <h3 style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '0.9375rem', marginBottom: 2, textAlign: 'center' }}>
                 Goal Progress
               </h3>
               <p style={{ color: 'var(--muted)', fontSize: '0.6875rem', marginBottom: 4, textAlign: 'center' }}>

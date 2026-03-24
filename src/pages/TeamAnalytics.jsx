@@ -207,7 +207,7 @@ function ChartCard({ title, description, children, style = {} }) {
         ...style,
       }}
     >
-      <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.0625rem', fontWeight: 600, marginBottom: 2 }}>
+      <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '1.0625rem', fontWeight: 600, marginBottom: 2 }}>
         {title}
       </h3>
       <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginBottom: 20 }}>
@@ -555,7 +555,7 @@ export default function TeamAnalytics() {
         }}
       >
         <div>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', marginBottom: 2 }}>
+          <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: 2 }}>
             Team Analytics
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: '0.875rem' }}>{timeLabel}</p>

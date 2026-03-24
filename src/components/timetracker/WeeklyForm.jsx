@@ -262,7 +262,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '2rem 1.5rem 6rem' }}>
       {/* Page header */}
       <div style={{ marginBottom: '1.75rem' }}>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', marginBottom: '0.25rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '0.25rem' }}>
           Weekly Time Log
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem' }}>

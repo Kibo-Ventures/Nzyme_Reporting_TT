@@ -33,7 +33,7 @@ export default function SuccessScreen({ userName, weekStart, onReset }) {
         </svg>
       </div>
 
-      <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', marginBottom: '0.5rem' }}>
+      <h2 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.5rem', marginBottom: '0.5rem' }}>
         Time logged
       </h2>
       <p style={{ color: 'var(--muted)', fontSize: '0.9375rem', marginBottom: '2rem' }}>
