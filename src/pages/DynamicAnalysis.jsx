@@ -15,6 +15,11 @@ const AXIS_OPTIONS = [
   { value: 'stage_transition_count', label: 'Number of Stage Transitions' },
   { value: 'equity_required',        label: 'Equity Required (€m)' },
   { value: 'attractiveness_score',   label: 'Attractiveness Score',  domain: [0, 5], tickCount: 6 },
+  { value: 'ic_stage_rank',          label: 'IC Stage',              domain: [0, 3], tickCount: 4,
+    tickFormatter: v => ['Pre-checklist', 'Checklist', 'First IC', '2+ ICs'][v] ?? v },
+  { value: 'milestone_depth',        label: 'Milestone Depth',       domain: [0, 6], tickCount: 7,
+    tickFormatter: v => ['None', 'NDA', 'IM', 'NBO', 'VDR/FAQ', 'MIP', 'TS'][v] ?? v },
+  { value: 'milestone_count',        label: 'Milestone Count' },
 ];
 
 const COLOR_BY_OPTIONS = [
@@ -138,6 +143,8 @@ export default function DynamicAnalysis() {
     { col: 'deal_lifespan_days',   label: 'Lifespan (days)' },
     { col: 'equity_required',      label: 'Equity (€)' },
     { col: 'attractiveness_score', label: 'Attract. Score' },
+    { col: 'ic_stage_rank',        label: 'IC Stage' },
+    { col: 'milestone_depth',      label: 'Milestone Depth' },
   ];
 
   return (
@@ -209,6 +216,7 @@ export default function DynamicAnalysis() {
                   offset: -10,
                   style: { fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--muted)' },
                 }}
+                tickFormatter={xConfig?.tickFormatter}
                 tick={{ fontFamily: 'var(--font-mono)', fontSize: 11, fill: 'var(--muted)' }}
               />
               <YAxis
@@ -224,6 +232,7 @@ export default function DynamicAnalysis() {
                   position: 'insideLeft',
                   style: { fontFamily: 'var(--font-sans)', fontSize: 12, fill: 'var(--muted)' },
                 }}
+                tickFormatter={yConfig?.tickFormatter}
                 tick={{ fontFamily: 'var(--font-mono)', fontSize: 11, fill: 'var(--muted)' }}
               />
               <Tooltip
@@ -296,6 +305,8 @@ export default function DynamicAnalysis() {
                   <td style={numCell}>{d.deal_lifespan_days ?? '—'}</td>
                   <td style={numCell}>{d.equity_required != null ? `€${(d.equity_required / 1e6).toFixed(1)}m` : '—'}</td>
                   <td style={numCell}>{d.attractiveness_score != null ? Number(d.attractiveness_score).toFixed(1) : '—'}</td>
+                  <td style={numCell}>{d.ic_stage_rank ?? '—'}</td>
+                  <td style={numCell}>{d.milestone_depth ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
