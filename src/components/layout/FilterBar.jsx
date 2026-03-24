@@ -9,7 +9,7 @@ const DATE_PILLS = [
   { key: 'custom', label: 'Custom' },
 ]
 
-export default function FilterBar({ disableDateRange = false }) {
+export default function FilterBar({ disableDateRange = false, hideChannel = false }) {
   const { filters, setFilter } = useFilters()
   const dealCaptainQuery = useDealCaptainOptions()
   const stageQuery = useStageOptions()
@@ -38,7 +38,7 @@ export default function FilterBar({ disableDateRange = false }) {
     >
       {/* Date range pills */}
       <div
-        title={disableDateRange ? 'Funnel uses lifetime data' : undefined}
+        title={disableDateRange ? 'Date filter not applicable for this view' : undefined}
         style={{
           display: 'flex',
           gap: '2px',
@@ -126,25 +126,27 @@ export default function FilterBar({ disableDateRange = false }) {
             onChange={val => setFilter({ stage: val })}
             placeholder="Stage"
           />
-          <select
-            value={filters.channel}
-            onChange={e => setFilter({ channel: e.target.value })}
-            style={{
-              padding: '0.375rem 0.75rem',
-              fontSize: '0.8125rem',
-              fontFamily: 'var(--font-sans)',
-              border: '1px solid var(--rule)',
-              borderRadius: '8px',
-              background: 'white',
-              color: 'var(--ink)',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="all">All Channels</option>
-            {channelOptions.map(ch => (
-              <option key={ch} value={ch}>{ch}</option>
-            ))}
-          </select>
+          {!hideChannel && (
+            <select
+              value={filters.channel}
+              onChange={e => setFilter({ channel: e.target.value })}
+              style={{
+                padding: '0.375rem 0.75rem',
+                fontSize: '0.8125rem',
+                fontFamily: 'var(--font-sans)',
+                border: '1px solid var(--rule)',
+                borderRadius: '8px',
+                background: 'white',
+                color: 'var(--ink)',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="all">All Channels</option>
+              {channelOptions.map(ch => (
+                <option key={ch} value={ch}>{ch}</option>
+              ))}
+            </select>
+          )}
         </>
       )}
 

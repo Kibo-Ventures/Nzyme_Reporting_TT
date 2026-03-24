@@ -13,8 +13,16 @@ const AXIS_OPTIONS = [
   { value: 'avg_days_per_stage',     label: 'Avg Days per Stage' },
   { value: 'deal_age_days',          label: 'Deal Age (days)' },
   { value: 'stage_transition_count', label: 'Number of Stage Transitions' },
+  { value: 'equity_required',        label: 'Equity Required (€)' },
+  { value: 'attractiveness_score',   label: 'Attractiveness Score' },
 ];
 
+const COLOR_BY_OPTIONS = [
+  { value: 'funnel_depth_label', label: 'Stage' },
+  { value: 'channel_label',      label: 'Channel' },
+];
+
+// Fixed colors for known stage values
 const STAGE_COLORS = {
   'DD Phase':        '#1a3a2a',
   'Working on Deal': '#2e6da4',
@@ -23,6 +31,16 @@ const STAGE_COLORS = {
   'Portfolio':       '#3a4080',
   'Other':           '#9a9589',
 };
+
+// Fallback palette for arbitrary categorical keys (e.g. channel names)
+const FALLBACK_PALETTE = [
+  '#2e6da4', '#c07830', '#2d9e6a', '#6b3a80', '#1a3a2a',
+  '#a04040', '#3a4080', '#80602a', '#207060', '#804060',
+];
+
+function resolveColor(key, colorIndex) {
+  return STAGE_COLORS[key] ?? FALLBACK_PALETTE[colorIndex % FALLBACK_PALETTE.length];
+}
 
 function ChartTooltip({ active, payload, xAxis, yAxis }) {
   if (!active || !payload?.length) return null;
@@ -44,8 +62,8 @@ function ChartTooltip({ active, payload, xAxis, yAxis }) {
     }}>
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{d.deal_name}</div>
       <div style={{ color: 'var(--muted)', marginBottom: 6, fontSize: 12 }}>{d.captain}</div>
-      <div>{xLabel}: <strong>{d[xAxis]}</strong></div>
-      <div>{yLabel}: <strong>{d[yAxis]}</strong></div>
+      <div>{xLabel}: <strong>{d[xAxis] ?? '—'}</strong></div>
+      <div>{yLabel}: <strong>{d[yAxis] ?? '—'}</strong></div>
       <div style={{ marginTop: 8 }}>
         <StageBadge stage={d.current_stage} />
       </div>
@@ -63,23 +81,30 @@ const selectStyle = {
   background: 'var(--surface)',
 };
 
+const numCell = { padding: '9px 10px', fontFamily: 'var(--font-mono)', color: 'var(--ink)', fontSize: 12 };
+
 export default function DynamicAnalysis() {
   const [xAxis, setXAxis] = useState('total_hrs');
   const [yAxis, setYAxis] = useState('funnel_depth');
+  const [colorBy, setColorBy] = useState('funnel_depth_label');
   const [sortCol, setSortCol] = useState('funnel_depth');
   const [sortDir, setSortDir] = useState('desc');
   const [showAll, setShowAll] = useState(false);
 
   const { data = [], isLoading } = useAnalysisDeals();
 
-  const byStage = useMemo(() => {
-    return data.reduce((acc, deal) => {
-      const key = deal.funnel_depth_label ?? 'Other';
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(deal);
-      return acc;
-    }, {});
-  }, [data]);
+  // Group deals by the selected color-by field; track insertion order for palette assignment
+  const { groups, groupColors } = useMemo(() => {
+    const groups = {};
+    const order = [];
+    for (const deal of data) {
+      const key = deal[colorBy] ?? 'Other';
+      if (!groups[key]) { groups[key] = []; order.push(key); }
+      groups[key].push(deal);
+    }
+    const groupColors = Object.fromEntries(order.map((k, i) => [k, resolveColor(k, i)]));
+    return { groups, groupColors };
+  }, [data, colorBy]);
 
   const sortedData = useMemo(() => {
     return [...data].sort((a, b) => {
@@ -100,6 +125,18 @@ export default function DynamicAnalysis() {
 
   const tableRows = showAll ? sortedData : sortedData.slice(0, 8);
 
+  const TABLE_COLS = [
+    { col: 'deal_name',            label: 'Deal' },
+    { col: 'captain',              label: 'Captain' },
+    { col: 'funnel_depth',         label: 'Stage' },
+    { col: 'channel_label',        label: 'Channel' },
+    { col: 'total_hrs',            label: 'Hrs' },
+    { col: 'avg_days_per_stage',   label: 'Avg Days/Stage' },
+    { col: 'deal_age_days',        label: 'Age (days)' },
+    { col: 'equity_required',      label: 'Equity (€)' },
+    { col: 'attractiveness_score', label: 'Attract. Score' },
+  ];
+
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
       {/* Page header */}
@@ -114,7 +151,7 @@ export default function DynamicAnalysis() {
 
       {/* Chart card */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
-        {/* Axis controls */}
+        {/* Axis + color-by controls */}
         <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
           <label style={{ fontSize: 13, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)' }}>
             X Axis
@@ -129,6 +166,15 @@ export default function DynamicAnalysis() {
             Y Axis
             <select value={yAxis} onChange={e => setYAxis(e.target.value)} style={selectStyle}>
               {AXIS_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label style={{ fontSize: 13, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)' }}>
+            Colour by
+            <select value={colorBy} onChange={e => setColorBy(e.target.value)} style={selectStyle}>
+              {COLOR_BY_OPTIONS.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
@@ -179,12 +225,12 @@ export default function DynamicAnalysis() {
                 verticalAlign="top"
                 wrapperStyle={{ fontFamily: 'var(--font-sans)', fontSize: 12, paddingBottom: 12 }}
               />
-              {Object.entries(byStage).map(([stage, deals]) => (
+              {Object.entries(groups).map(([key, deals]) => (
                 <Scatter
-                  key={stage}
-                  name={stage}
+                  key={key}
+                  name={key}
                   data={deals}
-                  fill={STAGE_COLORS[stage] ?? '#9a9589'}
+                  fill={groupColors[key]}
                   fillOpacity={0.75}
                 />
               ))}
@@ -202,14 +248,7 @@ export default function DynamicAnalysis() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: 'var(--font-sans)' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--rule)' }}>
-                {[
-                  { col: 'deal_name',          label: 'Deal' },
-                  { col: 'captain',            label: 'Captain' },
-                  { col: 'funnel_depth',       label: 'Stage' },
-                  { col: 'total_hrs',          label: 'Hrs' },
-                  { col: 'avg_days_per_stage', label: 'Avg Days/Stage' },
-                  { col: 'deal_age_days',      label: 'Age (days)' },
-                ].map(({ col, label }) => (
+                {TABLE_COLS.map(({ col, label }) => (
                   <th
                     key={col}
                     onClick={() => handleSort(col)}
@@ -239,22 +278,15 @@ export default function DynamicAnalysis() {
                     background: i % 2 === 0 ? 'transparent' : 'var(--paper)',
                   }}
                 >
-                  <td style={{ padding: '9px 10px', color: 'var(--ink)', fontWeight: 500 }}>
-                    {d.deal_name}
-                  </td>
+                  <td style={{ padding: '9px 10px', color: 'var(--ink)', fontWeight: 500 }}>{d.deal_name}</td>
                   <td style={{ padding: '9px 10px', color: 'var(--muted)' }}>{d.captain}</td>
-                  <td style={{ padding: '9px 10px' }}>
-                    <StageBadge stage={d.current_stage} />
-                  </td>
-                  <td style={{ padding: '9px 10px', fontFamily: 'var(--font-mono)', color: 'var(--ink)', fontSize: 12 }}>
-                    {d.total_hrs}
-                  </td>
-                  <td style={{ padding: '9px 10px', fontFamily: 'var(--font-mono)', color: 'var(--ink)', fontSize: 12 }}>
-                    {Number(d.avg_days_per_stage).toFixed(1)}
-                  </td>
-                  <td style={{ padding: '9px 10px', fontFamily: 'var(--font-mono)', color: 'var(--ink)', fontSize: 12 }}>
-                    {d.deal_age_days}
-                  </td>
+                  <td style={{ padding: '9px 10px' }}><StageBadge stage={d.current_stage} /></td>
+                  <td style={{ padding: '9px 10px', color: 'var(--muted)', fontSize: 12 }}>{d.channel_label ?? '—'}</td>
+                  <td style={numCell}>{d.total_hrs ?? '—'}</td>
+                  <td style={numCell}>{d.avg_days_per_stage != null ? Number(d.avg_days_per_stage).toFixed(1) : '—'}</td>
+                  <td style={numCell}>{d.deal_age_days ?? '—'}</td>
+                  <td style={numCell}>{d.equity_required != null ? `€${(d.equity_required / 1e6).toFixed(1)}m` : '—'}</td>
+                  <td style={numCell}>{d.attractiveness_score != null ? Number(d.attractiveness_score).toFixed(1) : '—'}</td>
                 </tr>
               ))}
             </tbody>
