@@ -9,7 +9,8 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const AXIS_OPTIONS = [
   { value: 'total_hrs',              label: 'Total Hours on Deal' },
-  { value: 'funnel_depth',           label: 'Funnel Depth Reached',  domain: [0, 6], tickCount: 7 },
+  { value: 'funnel_depth',           label: 'Funnel Depth Reached',  domain: [0, 6], tickCount: 7,
+    tickFormatter: v => ['', 'Other', 'Being Explored', 'Under Analysis', 'Working on Deal', 'DD Phase', 'Portfolio'][v] ?? v },
   { value: 'avg_days_per_stage',     label: 'Avg Days per Stage',     domain: [0, 350], filterMax: 350 },
   { value: 'deal_lifespan_days',     label: 'Deal Lifespan (days)' },
   { value: 'stage_transition_count', label: 'Number of Stage Transitions' },
