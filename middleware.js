@@ -5,7 +5,8 @@ export const config = {
 export default function middleware(request) {
   // 1. Figure out which page they are trying to access
   const url = new URL(request.url);
-const isReporting = !url.pathname.startsWith('/timetracker');
+  const isReporting = url.pathname.startsWith('/reporting');
+
   // 2. Select the correct credentials based on the page
   const expectedUser = isReporting ? process.env.REPORT_AUTH_USER : process.env.BASIC_AUTH_USER;
   const expectedPass = isReporting ? process.env.REPORT_AUTH_PASSWORD : process.env.BASIC_AUTH_PASSWORD;
