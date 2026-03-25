@@ -5,7 +5,8 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { useProprietaryDeals, useTotalDealsCount } from '../hooks/useProprietaryDeals'
-import { PROPRIETARY_DEAL_GOAL } from '../lib/config'
+import { useFilters } from '../hooks/useFilters'
+import { proprietaryGoalForRange } from '../lib/config'
 import KpiCard from '../components/ui/KpiCard'
 import { StageBadge } from '../components/ui/Badge'
 import { shortName } from '../lib/utils'
@@ -307,8 +308,11 @@ export default function ProprietaryDealflow() {
   const [kamPivot, setKamPivot] = useState('volume')
   const [funnelPivot, setFunnelPivot] = useState(false)
 
+  const { filters } = useFilters()
   const { data: deals = [], isLoading, error } = useProprietaryDeals()
   const { data: totalCount = 0 } = useTotalDealsCount()
+
+  const goal = proprietaryGoalForRange(filters)
 
   const kpis = useMemo(() => {
     const quality = deals.filter(d => d.is_quality_lead).length
@@ -364,7 +368,7 @@ export default function ProprietaryDealflow() {
 
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        <KpiCard title="Proprietary Deals"  value={kpis.total}           subtitle={`goal: ${PROPRIETARY_DEAL_GOAL}`} />
+        <KpiCard title="Proprietary Deals"  value={kpis.total}           subtitle={`goal: ${goal}`} />
         <KpiCard title="% of Total Dealflow" value={`${kpis.pctOfTotal}%`} subtitle="excl. adviser-sourced" />
         <KpiCard title="Quality Leads"       value={kpis.quality}         subtitle="High or Med-High priority" />
         <KpiCard title="Top Deal Captain"    value={kpis.topKam}          subtitle={kpis.topKam !== '—' ? `${kpis.topKamCount} deal${kpis.topKamCount !== 1 ? 's' : ''}` : 'no data'} />
@@ -386,7 +390,7 @@ export default function ProprietaryDealflow() {
               <p style={{ color: 'var(--muted)', fontSize: '0.6875rem', marginBottom: 4, textAlign: 'center' }}>
                 Proprietary deals vs target
               </p>
-              <DonutChart achieved={kpis.total} goal={PROPRIETARY_DEAL_GOAL} />
+              <DonutChart achieved={kpis.total} goal={goal} />
               <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 4 }}>
                 {[['#1a3a2a', 'Achieved'], ['#e8f0eb', 'Remaining']].map(([bg, label]) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.6875rem', color: 'var(--muted)' }}>
