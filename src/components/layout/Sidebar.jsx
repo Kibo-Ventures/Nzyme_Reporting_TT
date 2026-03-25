@@ -62,10 +62,18 @@ export default function Sidebar() {
             <div key={item.to}>
               {item.group && (i === 0 || navItems[i - 1].group !== item.group) && (
                 <div
-                  className="px-3 pt-4 pb-1 text-xs font-semibold tracking-widest uppercase"
+                  className="px-3 pt-4 pb-1 text-xs font-semibold tracking-widest uppercase flex items-center"
                   style={{ color: 'var(--muted)' }}
                 >
                   {item.group}
+                  {item.group === 'REPORTING' && (
+                    <span
+                      className="ml-2 px-1 text-xs font-semibold rounded"
+                      style={{ background: 'var(--orig-bg)', color: 'var(--orig-fg)', letterSpacing: 'normal', fontFamily: 'DM Mono, monospace' }}
+                    >
+                      WIP
+                    </span>
+                  )}
                 </div>
               )}
               <NavLink
