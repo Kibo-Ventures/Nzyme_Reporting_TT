@@ -327,9 +327,11 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
             color: '#4a7a5a',
+            lineHeight: 1.3,
           }}
         >
-          Exp&nbsp;%&nbsp;(Upcoming)
+          Exp&nbsp;%<br />
+          <span style={{ fontWeight: 400 }}>(Upcoming)</span>
         </div>
         <div
           style={{
@@ -340,9 +342,11 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
             color: '#8a5020',
+            lineHeight: 1.3,
           }}
         >
-          Actual&nbsp;%&nbsp;(Past)
+          Actual&nbsp;%<br />
+          <span style={{ fontWeight: 400 }}>(Past)</span>
         </div>
       </div>
 
