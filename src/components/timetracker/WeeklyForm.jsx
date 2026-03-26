@@ -186,6 +186,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
 
   // Computed totals
   const allVals = Object.values(entries)
+  const totalPctExpected = allVals.reduce((s, e) => s + (parseFloat(e.pct) || 0), 0)
   const totalPctActual = allVals.reduce((s, e) => s + (parseFloat(e.pct_actual) || 0), 0)
   const overPct = totalPctActual > 100
 
@@ -328,7 +329,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
             color: '#4a7a5a',
           }}
         >
-          Exp&nbsp;%
+          Exp&nbsp;%&nbsp;(Upcoming)
         </div>
         <div
           style={{
@@ -341,7 +342,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
             color: '#8a5020',
           }}
         >
-          Actual&nbsp;%
+          Actual&nbsp;%&nbsp;(Past)
         </div>
       </div>
 
@@ -478,6 +479,23 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
           gap: 16,
         }}
       >
+        {/* Expected % total */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, minWidth: 100 }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Total Exp %
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '1.25rem',
+              fontWeight: 600,
+              color: totalPctExpected === 100 ? 'var(--accent)' : 'var(--ink)',
+            }}
+          >
+            {totalPctExpected.toFixed(totalPctExpected % 1 === 0 ? 0 : 1)}%
+          </span>
+        </div>
+
         {/* Actual % total */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, minWidth: 100 }}>
           <span style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>

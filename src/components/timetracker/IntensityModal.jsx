@@ -53,9 +53,9 @@ export default function IntensityModal({ formData, weekStart, selectedUser, onSu
       >
         <h2
           style={{
-            fontFamily: 'var(--font-serif)',
+            fontFamily: 'var(--font-sans)',
             fontSize: '1.75rem',
-            fontWeight: 400,
+            fontWeight: 700,
             marginBottom: 8,
             color: 'var(--ink)',
           }}
