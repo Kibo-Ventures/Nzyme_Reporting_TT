@@ -60,7 +60,7 @@ export default function IntensityModal({ formData, weekStart, selectedUser, onSu
             color: 'var(--ink)',
           }}
         >
-          How intense was this week?
+          How intense was last week?
         </h2>
         <p
           style={{
