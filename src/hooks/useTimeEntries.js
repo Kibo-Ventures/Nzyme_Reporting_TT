@@ -77,6 +77,22 @@ export function useTrackerData() {
   }
 }
 
+export function useInternalCategories() {
+  return useQuery({
+    queryKey: ['internal-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ReportingNz_internal_categories')
+        .select('name, sort_order')
+        .eq('is_active', true)
+        .order('sort_order')
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 60 * 60 * 1000,
+  })
+}
+
 export function useUserEntries(userName, weekStart) {
   return useQuery({
     queryKey: ['user-entries', userName, weekStart],

@@ -1,18 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { useTrackerData, useUserEntries, getMondayISO } from '../../hooks/useTimeEntries'
+import { useTrackerData, useUserEntries, useInternalCategories, getMondayISO } from '../../hooks/useTimeEntries'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import IntensityModal from './IntensityModal'
 
-const INTERNAL = [
-  'Recruiting',
-  'Investor Relations / LP',
-  'Fund Operations',
-  'Expansion & Business Development',
-]
-const ADMIN_LEAVE = [
-  'Training & development',
-  'Out of office (Bank Holiday, Annual Leave, Sick)',
-]
 
 const TAG = {
   deal:     { background: '#f0ebe0', color: '#5a4a30' },
@@ -142,6 +132,7 @@ function SectionHeader({ label, count, collapsible, open, onToggle }) {
 export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) {
   const weekStart = getMondayISO()
   const { isLoading, error: dataError, dealflow, longtail, portfolio, origChannels, teamMembers } = useTrackerData()
+  const { data: internalCategories = [], isLoading: internalLoading } = useInternalCategories()
   const userEntriesQ = useUserEntries(selectedUser, weekStart)
 
   const [entries, setEntries] = useState({})
@@ -219,8 +210,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
     addRows([...longtail, { name: 'Other (Longtail)' }], 'longtail')
     addRows(origChannels, 'orig')
     addRows(portfolio, 'portco')
-    addRows(INTERNAL, 'internal')
-    addRows(ADMIN_LEAVE, 'internal')
+    addRows(internalCategories.map(c => c.name), 'internal')
 
     if (rows.length === 0) {
       setSubmitError('Please enter at least one time entry before submitting.')
@@ -444,30 +434,21 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
       )}
 
       {/* ── INTERNAL ── */}
-      <SectionHeader label="Internal" />
-      {INTERNAL.map(name => (
-        <EntryRow
-          key={name}
-          label={name}
-          type="internal"
-          categoryKey={name}
-          entries={entries}
-          onChange={handleChange}
-        />
-      ))}
-
-      {/* ── TIME OFF & TRAINING ── */}
-      <SectionHeader label="Time Off & Training" />
-      {ADMIN_LEAVE.map(name => (
-        <EntryRow
-          key={name}
-          label={name}
-          type="internal"
-          categoryKey={name}
-          entries={entries}
-          onChange={handleChange}
-        />
-      ))}
+      <SectionHeader label="Internal" count={internalLoading ? null : internalCategories.length} />
+      {internalLoading ? (
+        <LoadingSpinner />
+      ) : (
+        internalCategories.map(c => (
+          <EntryRow
+            key={c.name}
+            label={c.name}
+            type="internal"
+            categoryKey={c.name}
+            entries={entries}
+            onChange={handleChange}
+          />
+        ))
+      )}
 
       {/* ── FOOTER: totals + submit ── */}
       <div
