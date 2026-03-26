@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '../../lib/supabase'
 import { useTrackerData, useUserEntries, getMondayISO } from '../../hooks/useTimeEntries'
 import LoadingSpinner from '../ui/LoadingSpinner'
+import IntensityModal from './IntensityModal'
 
 const INTERNAL = [
   'Recruiting',
@@ -55,7 +55,7 @@ function Tag({ label, type }) {
 function EntryRow({ label, type, categoryKey, entries, onChange }) {
   const val = entries[categoryKey] || {}
   const pct = val.pct ?? ''
-  const hrs = val.hrs ?? ''
+  const pctActual = val.pct_actual ?? ''
 
   return (
     <div
@@ -82,11 +82,12 @@ function EntryRow({ label, type, categoryKey, entries, onChange }) {
       />
       <input
         type="number"
-        value={hrs}
-        onChange={e => onChange(categoryKey, 'hrs', e.target.value)}
+        value={pctActual}
+        onChange={e => onChange(categoryKey, 'pct_actual', e.target.value)}
         placeholder="0"
         min="0"
-        step="0.5"
+        max="100"
+        step="5"
         style={inputStyle}
       />
     </div>
@@ -146,8 +147,9 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
   const [entries, setEntries] = useState({})
   const [showLongtail, setShowLongtail] = useState(false)
   const [showOrig, setShowOrig] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+  const [pendingRows, setPendingRows] = useState(null)
+  const [showIntensityModal, setShowIntensityModal] = useState(false)
 
   // Reset entries when user selection changes
   const prevUser = useRef(selectedUser)
@@ -164,11 +166,11 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
     const filled = {}
     for (const row of userEntriesQ.data) {
       const p = Number(row.pct_expected)
-      const h = Number(row.hrs_actual)
-      if (p > 0 || h > 0) {
+      const a = Number(row.pct_actual)
+      if (p > 0 || a > 0) {
         filled[row.category_key] = {
           pct: p > 0 ? String(p) : '',
-          hrs: h > 0 ? String(h) : '',
+          pct_actual: a > 0 ? String(a) : '',
         }
       }
     }
@@ -184,60 +186,48 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
 
   // Computed totals
   const allVals = Object.values(entries)
-  const totalPct = allVals.reduce((s, e) => s + (parseFloat(e.pct) || 0), 0)
-  const totalHrs = allVals.reduce((s, e) => s + (parseFloat(e.hrs) || 0), 0)
-  const overPct = totalPct > 100
+  const totalPctActual = allVals.reduce((s, e) => s + (parseFloat(e.pct_actual) || 0), 0)
+  const overPct = totalPctActual > 100
 
-  async function handleSubmit() {
+  function handleSubmitClick() {
     if (!selectedUser) return
-    setSubmitting(true)
     setSubmitError(null)
 
-    try {
-      const rows = []
+    const rows = []
 
-      function addRows(items, type) {
-        for (const item of items) {
-          const key = typeof item === 'string' ? item : item.name
-          const e = entries[key] || {}
-          const pct = parseFloat(e.pct) || 0
-          const hrs = parseFloat(e.hrs) || 0
-          if (pct > 0 || hrs > 0) {
-            rows.push({
-              user_name: selectedUser,
-              week_start: weekStart,
-              category_key: key,
-              category_type: type,
-              pct_expected: pct,
-              hrs_actual: hrs,
-            })
-          }
+    function addRows(items, type) {
+      for (const item of items) {
+        const key = typeof item === 'string' ? item : item.name
+        const e = entries[key] || {}
+        const pct = parseFloat(e.pct) || 0
+        const pct_actual = parseFloat(e.pct_actual) || 0
+        if (pct > 0 || pct_actual > 0) {
+          rows.push({
+            user_name: selectedUser,
+            week_start: weekStart,
+            category_key: key,
+            category_type: type,
+            pct_expected: pct,
+            pct_actual,
+          })
         }
       }
-
-      addRows(dealflow, 'deal')
-      addRows([...longtail, { name: 'Other (Longtail)' }], 'longtail')
-      addRows(origChannels, 'orig')
-      addRows(portfolio, 'portco')
-      addRows(INTERNAL, 'internal')
-      addRows(ADMIN_LEAVE, 'internal')
-
-      if (rows.length === 0) {
-        setSubmitError('Please enter at least one time entry before submitting.')
-        return
-      }
-
-      const { error: sbErr } = await supabase
-        .from('ReportingNz_time_entries')
-        .upsert(rows, { onConflict: 'user_name,week_start,category_key' })
-
-      if (sbErr) throw sbErr
-      onSubmitted()
-    } catch (e) {
-      setSubmitError(e.message || 'Failed to submit. Please try again.')
-    } finally {
-      setSubmitting(false)
     }
+
+    addRows(dealflow, 'deal')
+    addRows([...longtail, { name: 'Other (Longtail)' }], 'longtail')
+    addRows(origChannels, 'orig')
+    addRows(portfolio, 'portco')
+    addRows(INTERNAL, 'internal')
+    addRows(ADMIN_LEAVE, 'internal')
+
+    if (rows.length === 0) {
+      setSubmitError('Please enter at least one time entry before submitting.')
+      return
+    }
+
+    setPendingRows(rows)
+    setShowIntensityModal(true)
   }
 
   // Week label
@@ -260,6 +250,16 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '2rem 1.5rem 6rem' }}>
+      {showIntensityModal && pendingRows && (
+        <IntensityModal
+          formData={pendingRows}
+          weekStart={weekStart}
+          selectedUser={selectedUser}
+          onSuccess={onSubmitted}
+          onClose={() => setShowIntensityModal(false)}
+        />
+      )}
+
       {/* Page header */}
       <div style={{ marginBottom: '1.75rem' }}>
         <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '0.25rem' }}>
@@ -341,7 +341,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
             color: '#8a5020',
           }}
         >
-          Actual&nbsp;hrs
+          Actual&nbsp;%
         </div>
       </div>
 
@@ -478,39 +478,26 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
           gap: 16,
         }}
       >
-        {/* Pct total */}
+        {/* Actual % total */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, minWidth: 100 }}>
           <span style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Total %
+            Total Actual %
           </span>
           <span
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: '1.25rem',
               fontWeight: 600,
-              color: overPct ? 'var(--danger)' : totalPct === 100 ? 'var(--accent)' : 'var(--ink)',
+              color: overPct ? 'var(--danger)' : totalPctActual === 100 ? 'var(--accent)' : 'var(--ink)',
             }}
           >
-            {totalPct.toFixed(totalPct % 1 === 0 ? 0 : 1)}%
+            {totalPctActual.toFixed(totalPctActual % 1 === 0 ? 0 : 1)}%
           </span>
           {overPct && (
             <span style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>
-              {(totalPct - 100).toFixed(1)}% over
+              {(totalPctActual - 100).toFixed(1)}% over
             </span>
           )}
-        </div>
-
-        {/* Hrs total */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, minWidth: 100 }}>
-          <span style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Total hrs
-          </span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.25rem', fontWeight: 600 }}>
-            {totalHrs.toFixed(totalHrs % 1 === 0 ? 0 : 1)}
-          </span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-            {totalHrs > 0 ? `${(totalHrs / 5).toFixed(1)} / day` : '0 / day'}
-          </span>
         </div>
 
         <div style={{ flex: 1 }} />
@@ -524,22 +511,22 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
 
         {/* Submit button */}
         <button
-          onClick={handleSubmit}
-          disabled={!selectedUser || submitting || overPct}
+          onClick={handleSubmitClick}
+          disabled={!selectedUser || overPct}
           style={{
             padding: '0.625rem 1.5rem',
             fontSize: '0.9375rem',
             fontFamily: 'var(--font-sans)',
             fontWeight: 600,
-            background: !selectedUser || submitting || overPct ? 'var(--rule)' : 'var(--accent)',
-            color: !selectedUser || submitting || overPct ? 'var(--muted)' : 'white',
+            background: !selectedUser || overPct ? 'var(--rule)' : 'var(--accent)',
+            color: !selectedUser || overPct ? 'var(--muted)' : 'white',
             border: 'none',
             borderRadius: 8,
-            cursor: !selectedUser || submitting || overPct ? 'not-allowed' : 'pointer',
+            cursor: !selectedUser || overPct ? 'not-allowed' : 'pointer',
             transition: 'background 0.15s',
           }}
         >
-          {submitting ? 'Submitting…' : 'Submit'}
+          Submit
         </button>
       </div>
     </div>

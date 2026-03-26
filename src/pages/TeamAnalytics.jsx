@@ -111,7 +111,7 @@ function buildFteData(entries, timeframe, stageMap, stageFilters) {
 function buildLifetimeData(entries, stageMap, stageFilters) {
   const acc = {}
   entries.forEach(row => {
-    acc[row.category_key] = (acc[row.category_key] || 0) + (row.hrs_actual || 0)
+    acc[row.category_key] = (acc[row.category_key] || 0) + (row.hrs_calculated || 0)
   })
   return Object.entries(acc)
     .map(([name, hrs]) => ({
@@ -159,10 +159,10 @@ function buildLifetimeMatrix(entries, stageMap, stageFilters) {
     const stage = stageMap[row.category_key] || 'Working on Deal'
     if (!stageFilters.has(stage)) return
     if (!dealsMap[row.category_key]) dealsMap[row.category_key] = { _rowTotal: 0 }
-    dealsMap[row.category_key][row.user_name] = (dealsMap[row.category_key][row.user_name] || 0) + row.hrs_actual
-    dealsMap[row.category_key]._rowTotal += row.hrs_actual
-    userTotals[row.user_name] = (userTotals[row.user_name] || 0) + row.hrs_actual
-    grandTotal += row.hrs_actual
+    dealsMap[row.category_key][row.user_name] = (dealsMap[row.category_key][row.user_name] || 0) + row.hrs_calculated
+    dealsMap[row.category_key]._rowTotal += row.hrs_calculated
+    userTotals[row.user_name] = (userTotals[row.user_name] || 0) + row.hrs_calculated
+    grandTotal += row.hrs_calculated
   })
 
   const sortedDeals = Object.keys(dealsMap).sort(

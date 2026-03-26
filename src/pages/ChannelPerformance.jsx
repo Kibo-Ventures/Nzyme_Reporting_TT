@@ -290,7 +290,7 @@ export default function ChannelPerformance() {
     origEntries.forEach(e => {
       const ch = e.category_key
       if (!ch) return
-      origHoursMap[ch] = (origHoursMap[ch] ?? 0) + (e.hrs_actual ?? 0)
+      origHoursMap[ch] = (origHoursMap[ch] ?? 0) + (e.hrs_calculated ?? 0)
       if (!origMonthsMap[ch]) origMonthsMap[ch] = new Set()
       if (e.week_start) origMonthsMap[ch].add(e.week_start.slice(0, 7)) // YYYY-MM
     })

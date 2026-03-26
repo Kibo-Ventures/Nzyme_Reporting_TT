@@ -67,7 +67,7 @@ export function useChannelOrigEntries() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ReportingNz_time_entries')
-        .select('category_key, week_start, hrs_actual')
+        .select('category_key, week_start, hrs_calculated')
         .eq('category_type', 'orig')
       if (error) throw error
       return data || []

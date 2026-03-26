@@ -34,7 +34,7 @@ export function useTimeframeEntries(timeframe) {
     queryFn: async () => {
       let query = supabase
         .from('ReportingNz_time_entries')
-        .select('user_name, week_start, category_key, category_type, pct_expected, hrs_actual')
+        .select('user_name, week_start, category_key, category_type, pct_expected, hrs_calculated')
 
       if (timeframe === 'week') {
         query = query.eq('week_start', getMondayISO())
@@ -61,9 +61,9 @@ export function useLifetimeHoursEntries() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ReportingNz_time_entries')
-        .select('user_name, category_key, category_type, hrs_actual')
+        .select('user_name, category_key, category_type, hrs_calculated')
         .in('category_type', ['deal', 'longtail'])
-        .gt('hrs_actual', 0)
+        .gt('hrs_calculated', 0)
       if (error) throw error
       return data || []
     },

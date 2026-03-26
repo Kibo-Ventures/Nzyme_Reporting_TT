@@ -83,7 +83,7 @@ export function useUserEntries(userName, weekStart) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ReportingNz_time_entries')
-        .select('category_key, category_type, pct_expected, hrs_actual')
+        .select('category_key, category_type, pct_expected, pct_actual, intensity')
         .eq('user_name', userName)
         .eq('week_start', weekStart)
       if (error) throw error
