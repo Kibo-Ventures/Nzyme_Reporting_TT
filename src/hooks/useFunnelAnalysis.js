@@ -67,15 +67,16 @@ export function useStageTimeInvestment() {
   })
 }
 
-// Deals that were Lost or Discarded (identified by reason fields being non-null).
+// Deals that were Lost or Discarded — identified by their stage value in Affinity.
+// The Workload field is set to 'Lost' or 'Discarded' directly in the CRM.
 export function useLostDiscardedDeals() {
   return useQuery({
     queryKey: ['lost-discarded-deals'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ReportingNz_deals')
-        .select('name, stage, lost_reason, discarded_reason')
-        .or('lost_reason.not.is.null,discarded_reason.not.is.null')
+        .select('name, stage')
+        .in('stage', ['Lost', 'Discarded'])
       if (error) throw error
       return data || []
     },
