@@ -66,6 +66,15 @@ function bucketDays(values) {
   }))
 }
 
+function median(values) {
+  if (!values.length) return null
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 !== 0
+    ? sorted[mid]
+    : Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+}
+
 // ── Tooltip ──────────────────────────────────────────────────────────────────
 
 function CustomTooltip({ active, payload, label }) {
@@ -353,22 +362,19 @@ export default function FunnelAnalysis() {
     const lostDeals      = ldDeals.filter(d => d.stage === 'Lost')
     const discardedDeals = ldDeals.filter(d => d.stage === 'Discarded')
 
-    // Sum all days_in_stage per deal (approximates total funnel time)
+    // Sum all days_in_stage per deal (total funnel time before exit)
     const histByDeal = {}
     ldHistory.forEach(h => {
       histByDeal[h.deal_name] = (histByDeal[h.deal_name] || 0) + h.days_in_stage
     })
 
-    const avg = (names) => {
-      const totals = names.map(n => histByDeal[n]).filter(v => v > 0)
-      return totals.length ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length) : null
-    }
+    const medianDays = (names) => median(names.map(n => histByDeal[n]).filter(v => v > 0))
 
     return {
-      totalLost:       lostDeals.length,
-      totalDiscarded:  discardedDeals.length,
-      avgDaysLost:     avg(lostDeals.map(d => d.name)),
-      avgDaysDiscarded: avg(discardedDeals.map(d => d.name)),
+      totalLost:          lostDeals.length,
+      totalDiscarded:     discardedDeals.length,
+      medianDaysLost:     medianDays(lostDeals.map(d => d.name)),
+      medianDaysDiscarded: medianDays(discardedDeals.map(d => d.name)),
     }
   }, [ldDeals, ldHistory])
 
@@ -420,19 +426,18 @@ export default function FunnelAnalysis() {
     ldHistory
       .filter(h => relevantNames.has(h.deal_name) && !TERMINAL.has(h.stage_value))
       .forEach(h => {
-        if (!stageMap[h.stage_value]) stageMap[h.stage_value] = { total: 0, count: 0, deals: new Set() }
-        stageMap[h.stage_value].total += h.days_in_stage
-        stageMap[h.stage_value].count++
+        if (!stageMap[h.stage_value]) stageMap[h.stage_value] = { values: [], deals: new Set() }
+        stageMap[h.stage_value].values.push(h.days_in_stage)
         stageMap[h.stage_value].deals.add(h.deal_name)
       })
 
     return STAGE_ORDER
       .filter(s => stageMap[s])
       .map(s => ({
-        stage:     s,
-        shortName: STAGE_SHORT[s] ?? s,
-        avgDays:   Math.round(stageMap[s].total / stageMap[s].count),
-        dealCount: stageMap[s].deals.size,
+        stage:      s,
+        shortName:  STAGE_SHORT[s] ?? s,
+        medianDays: median(stageMap[s].values),
+        dealCount:  stageMap[s].deals.size,
       }))
   }, [ldDeals, ldHistory, ldFilter])
 
@@ -740,9 +745,9 @@ export default function FunnelAnalysis() {
           subtitle="lost_reason populated"
         />
         <KpiCard
-          title="Avg Days → Lost"
-          value={ldKpis.avgDaysLost != null ? `${ldKpis.avgDaysLost}d` : '—'}
-          subtitle="avg total funnel time before loss"
+          title="Median Days → Lost"
+          value={ldKpis.medianDaysLost != null ? `${ldKpis.medianDaysLost}d` : '—'}
+          subtitle="median total funnel time before loss"
         />
         <KpiCard
           title="Deals Discarded"
@@ -750,9 +755,9 @@ export default function FunnelAnalysis() {
           subtitle="discarded_reason populated"
         />
         <KpiCard
-          title="Avg Days → Discarded"
-          value={ldKpis.avgDaysDiscarded != null ? `${ldKpis.avgDaysDiscarded}d` : '—'}
-          subtitle="avg total funnel time before discard"
+          title="Median Days → Discarded"
+          value={ldKpis.medianDaysDiscarded != null ? `${ldKpis.medianDaysDiscarded}d` : '—'}
+          subtitle="median total funnel time before discard"
         />
       </div>
 
@@ -865,7 +870,7 @@ export default function FunnelAnalysis() {
         <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
           <div className="mb-4">
             <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-              Average Days in Stage
+              Median Days in Stage
               {ldFilter !== 'all' && (
                 <span
                   className="ml-2 px-2 py-0.5 rounded text-xs font-medium"
@@ -879,14 +884,14 @@ export default function FunnelAnalysis() {
               )}
             </div>
             <div className="text-xs" style={{ color: 'var(--muted)' }}>
-              How long deals that eventually exited the pipeline spent in each stage on average
+              Median time deals that eventually exited the pipeline spent in each stage
             </div>
           </div>
           <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 8 }}>
             <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f5f7fa' }}>
-                  {['Stage', 'Avg Days in Stage', '# Deals'].map((h, i) => (
+                  {['Stage', 'Median Days in Stage', '# Deals'].map((h, i) => (
                     <th
                       key={h}
                       className="px-3 py-2 text-xs font-semibold uppercase tracking-wide"
@@ -926,7 +931,7 @@ export default function FunnelAnalysis() {
                       {row.shortName}
                     </td>
                     <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--ink)' }}>
-                      {row.avgDays}d
+                      {row.medianDays != null ? `${row.medianDays}d` : '—'}
                     </td>
                     <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--muted)' }}>
                       {row.dealCount}
