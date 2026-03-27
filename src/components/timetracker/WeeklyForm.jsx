@@ -435,7 +435,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
 
       {/* ── INTERNAL ── */}
       {(() => {
-        const ADMIN_BUCKETS = ['Training & Development', 'Out of Office']
+        const ADMIN_BUCKETS = ['Training & development', 'Out of office']
         const coreInternal = internalCategories.filter(c => !ADMIN_BUCKETS.includes(c.name))
         const adminCategories = internalCategories.filter(c => ADMIN_BUCKETS.includes(c.name))
         return (
