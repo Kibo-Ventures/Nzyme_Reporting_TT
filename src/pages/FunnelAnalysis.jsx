@@ -372,14 +372,30 @@ export default function FunnelAnalysis() {
     }
   }, [ldDeals, ldHistory])
 
+  // ── Furthest stage reached per deal (from history, not the deals.stage field
+  //    which is often cleared when a deal is lost/discarded in Affinity) ───────
+  const dealFurthestStage = useMemo(() => {
+    const map = {}
+    ldHistory.forEach(h => {
+      const newIdx     = STAGE_ORDER.indexOf(h.stage_value)
+      const currentIdx = STAGE_ORDER.indexOf(map[h.deal_name] ?? '')
+      if (newIdx > currentIdx) map[h.deal_name] = h.stage_value
+    })
+    // Fallback: if history is empty for a deal, use whatever stage is on the record
+    ldDeals.forEach(d => {
+      if (!map[d.name] && d.stage) map[d.name] = d.stage
+    })
+    return map // { dealName: furthestStageValue }
+  }, [ldDeals, ldHistory])
+
   // ── Lost & Discarded bar chart data (by stage) ────────────────────────────
   const lostDiscardedBarData = useMemo(() => {
     const lostDeals      = ldDeals.filter(d => d.lost_reason)
     const discardedDeals = ldDeals.filter(d => d.discarded_reason)
 
     return STAGE_ORDER.map(stageVal => {
-      const lostAtStage      = lostDeals.filter(d => d.stage === stageVal).length
-      const discardedAtStage = discardedDeals.filter(d => d.stage === stageVal).length
+      const lostAtStage      = lostDeals.filter(d => dealFurthestStage[d.name] === stageVal).length
+      const discardedAtStage = discardedDeals.filter(d => dealFurthestStage[d.name] === stageVal).length
       return {
         name:      STAGE_SHORT[stageVal] ?? stageVal,
         lost:      lostAtStage,
@@ -387,7 +403,7 @@ export default function FunnelAnalysis() {
         total:     lostAtStage + discardedAtStage,
       }
     }).filter(d => d.total > 0)
-  }, [ldDeals])
+  }, [ldDeals, dealFurthestStage])
 
   // ── Avg days in stage table (respects ldFilter) ───────────────────────────
   const avgDaysTableData = useMemo(() => {
