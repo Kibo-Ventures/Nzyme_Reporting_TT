@@ -67,6 +67,40 @@ export function useStageTimeInvestment() {
   })
 }
 
+// Deals that were Lost or Discarded (identified by reason fields being non-null).
+export function useLostDiscardedDeals() {
+  return useQuery({
+    queryKey: ['lost-discarded-deals'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ReportingNz_deals')
+        .select('name, stage, lost_reason, discarded_reason')
+        .or('lost_reason.not.is.null,discarded_reason.not.is.null')
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 10 * 60 * 1000,
+  })
+}
+
+// Stage history rows for a supplied set of deal names — used to compute avg days in stage.
+export function useLostDiscardedHistory(dealNames) {
+  return useQuery({
+    queryKey: ['lost-discarded-history', dealNames?.length ?? 0],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ReportingNz_deal_stage_history')
+        .select('deal_name, stage_value, days_in_stage')
+        .in('deal_name', dealNames)
+        .not('days_in_stage', 'is', null)
+      if (error) throw error
+      return data || []
+    },
+    enabled: Array.isArray(dealNames) && dealNames.length > 0,
+    staleTime: 10 * 60 * 1000,
+  })
+}
+
 // Raw deals for pivot breakdowns on the funnel page.
 export function useFunnelDeals() {
   return useQuery({

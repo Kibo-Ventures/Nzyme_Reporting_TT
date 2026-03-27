@@ -9,6 +9,8 @@ import {
   useAdviserStageBreakdown,
   useFunnelDeals,
   useStageTimeInvestment,
+  useLostDiscardedDeals,
+  useLostDiscardedHistory,
 } from '../hooks/useFunnelAnalysis'
 import KpiCard from '../components/ui/KpiCard'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
@@ -235,10 +237,14 @@ export default function FunnelAnalysis() {
   const [selectedStage, setSelectedStage] = useState(null)
   const [filterType, setFilterType] = useState(null)
   const [filterValue, setFilterValue] = useState(null)
+  const [ldFilter, setLdFilter] = useState('all') // 'all' | 'lost' | 'discarded'
   const { data: histogramRaw = [], isLoading: histLoading } = useStageHistogram(selectedStage)
   const { data: adviserRaw = [] } = useAdviserStageBreakdown()
   const { data: allDeals = [] } = useFunnelDeals()
   const { data: timeInvestmentRaw = [] } = useStageTimeInvestment()
+  const { data: ldDeals = [] } = useLostDiscardedDeals()
+  const ldDealNames = useMemo(() => ldDeals.map(d => d.name).filter(Boolean), [ldDeals])
+  const { data: ldHistory = [] } = useLostDiscardedHistory(ldDealNames)
 
   // Reset filterValue when filterType changes
   function handleFilterType(type) {
@@ -341,6 +347,76 @@ export default function FunnelAnalysis() {
     Object.values(map).forEach(s => s.deals.sort((a, b) => b.hrs - a.hrs))
     return map
   }, [timeInvestmentRaw])
+
+  // ── Lost & Discarded KPIs ─────────────────────────────────────────────────
+  const ldKpis = useMemo(() => {
+    const lostDeals      = ldDeals.filter(d => d.lost_reason)
+    const discardedDeals = ldDeals.filter(d => d.discarded_reason)
+
+    // Sum all days_in_stage per deal (approximates total funnel time)
+    const histByDeal = {}
+    ldHistory.forEach(h => {
+      histByDeal[h.deal_name] = (histByDeal[h.deal_name] || 0) + h.days_in_stage
+    })
+
+    const avg = (names) => {
+      const totals = names.map(n => histByDeal[n]).filter(v => v > 0)
+      return totals.length ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length) : null
+    }
+
+    return {
+      totalLost:       lostDeals.length,
+      totalDiscarded:  discardedDeals.length,
+      avgDaysLost:     avg(lostDeals.map(d => d.name)),
+      avgDaysDiscarded: avg(discardedDeals.map(d => d.name)),
+    }
+  }, [ldDeals, ldHistory])
+
+  // ── Lost & Discarded bar chart data (by stage) ────────────────────────────
+  const lostDiscardedBarData = useMemo(() => {
+    const lostDeals      = ldDeals.filter(d => d.lost_reason)
+    const discardedDeals = ldDeals.filter(d => d.discarded_reason)
+
+    return STAGE_ORDER.map(stageVal => {
+      const lostAtStage      = lostDeals.filter(d => d.stage === stageVal).length
+      const discardedAtStage = discardedDeals.filter(d => d.stage === stageVal).length
+      return {
+        name:      STAGE_SHORT[stageVal] ?? stageVal,
+        lost:      lostAtStage,
+        discarded: discardedAtStage,
+        total:     lostAtStage + discardedAtStage,
+      }
+    }).filter(d => d.total > 0)
+  }, [ldDeals])
+
+  // ── Avg days in stage table (respects ldFilter) ───────────────────────────
+  const avgDaysTableData = useMemo(() => {
+    const lostDeals      = ldDeals.filter(d => d.lost_reason)
+    const discardedDeals = ldDeals.filter(d => d.discarded_reason)
+
+    const relevantNames = new Set(
+      ldFilter === 'lost'      ? lostDeals.map(d => d.name)
+      : ldFilter === 'discarded' ? discardedDeals.map(d => d.name)
+      : ldDeals.map(d => d.name)
+    )
+
+    const stageMap = {}
+    ldHistory.filter(h => relevantNames.has(h.deal_name)).forEach(h => {
+      if (!stageMap[h.stage_value]) stageMap[h.stage_value] = { total: 0, count: 0, deals: new Set() }
+      stageMap[h.stage_value].total += h.days_in_stage
+      stageMap[h.stage_value].count++
+      stageMap[h.stage_value].deals.add(h.deal_name)
+    })
+
+    return STAGE_ORDER
+      .filter(s => stageMap[s])
+      .map(s => ({
+        stage:     s,
+        shortName: STAGE_SHORT[s] ?? s,
+        avgDays:   Math.round(stageMap[s].total / stageMap[s].count),
+        dealCount: stageMap[s].deals.size,
+      }))
+  }, [ldDeals, ldHistory, ldFilter])
 
   if (isLoading) {
     return (
@@ -620,6 +696,228 @@ export default function FunnelAnalysis() {
             </div>
           </div>
           <TimeInvestedTable stages={activeStages} timeByStage={timeByStage} />
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          LOST & DISCARDED DEALS
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div style={{ borderTop: '2px solid var(--rule)', paddingTop: 8 }}>
+        <h2
+          className="text-lg mb-1"
+          style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, color: 'var(--ink)' }}
+        >
+          Lost &amp; Discarded Deals
+        </h2>
+        <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
+          Deals that exited the pipeline — at which stage they dropped out and how long they spent in the funnel
+        </p>
+      </div>
+
+      {/* ── LD KPI cards ── */}
+      <div className="grid grid-cols-4 gap-4">
+        <KpiCard
+          title="Deals Lost"
+          value={ldKpis.totalLost ?? '—'}
+          subtitle="lost_reason populated"
+        />
+        <KpiCard
+          title="Avg Days → Lost"
+          value={ldKpis.avgDaysLost != null ? `${ldKpis.avgDaysLost}d` : '—'}
+          subtitle="avg total funnel time before loss"
+        />
+        <KpiCard
+          title="Deals Discarded"
+          value={ldKpis.totalDiscarded ?? '—'}
+          subtitle="discarded_reason populated"
+        />
+        <KpiCard
+          title="Avg Days → Discarded"
+          value={ldKpis.avgDaysDiscarded != null ? `${ldKpis.avgDaysDiscarded}d` : '—'}
+          subtitle="avg total funnel time before discard"
+        />
+      </div>
+
+      {/* ── Discarded/Lost at Stage bar chart ── */}
+      <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
+        <div className="mb-4 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+              Discarded / Lost at Stage
+            </div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>
+              Stage the deal was in when it exited the pipeline
+            </div>
+          </div>
+          {/* Toggle pills */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[
+              { key: 'all',       label: 'All',       activeBg: 'var(--accent)' },
+              { key: 'lost',      label: 'Lost',      activeBg: '#c07830'       },
+              { key: 'discarded', label: 'Discarded', activeBg: '#dc2626'       },
+            ].map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setLdFilter(opt.key)}
+                style={{
+                  padding:     '5px 14px',
+                  fontSize:    '0.75rem',
+                  fontWeight:  ldFilter === opt.key ? 600 : 400,
+                  border:      '1px solid var(--rule)',
+                  borderRadius: 6,
+                  background:  ldFilter === opt.key ? opt.activeBg : 'white',
+                  color:       ldFilter === opt.key ? 'white' : 'var(--ink)',
+                  cursor:      'pointer',
+                  transition:  'all 0.15s',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {lostDiscardedBarData.length === 0 ? (
+          <div className="text-sm text-center py-8" style={{ color: 'var(--muted)' }}>
+            No lost or discarded deal data available
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(180, lostDiscardedBarData.length * 44)}>
+            <BarChart
+              layout="vertical"
+              data={lostDiscardedBarData}
+              margin={{ top: 4, right: 52, bottom: 4, left: 130 }}
+            >
+              <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--rule)" />
+              <YAxis
+                dataKey="name"
+                type="category"
+                width={120}
+                tick={{ fontSize: 12, fill: 'var(--ink)' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <XAxis
+                type="number"
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: 'var(--muted)' }}
+              />
+              <Tooltip content={<CustomTooltip />} />
+
+              {/* Lost bar — shown for 'all' and 'lost' */}
+              {ldFilter !== 'discarded' && (
+                <Bar
+                  dataKey="lost"
+                  name="Lost"
+                  stackId="ld"
+                  fill="#c07830"
+                  radius={ldFilter === 'lost' ? [0, 3, 3, 0] : [0, 0, 0, 0]}
+                  isAnimationActive={false}
+                >
+                  {ldFilter === 'lost' && (
+                    <LabelList dataKey="lost" position="right" style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: 'var(--muted)' }} />
+                  )}
+                </Bar>
+              )}
+
+              {/* Discarded bar — shown for 'all' and 'discarded' */}
+              {ldFilter !== 'lost' && (
+                <Bar
+                  dataKey="discarded"
+                  name="Discarded"
+                  stackId="ld"
+                  fill="#dc2626"
+                  radius={[0, 3, 3, 0]}
+                  isAnimationActive={false}
+                >
+                  <LabelList
+                    dataKey={ldFilter === 'all' ? 'total' : 'discarded'}
+                    position="right"
+                    style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: 'var(--muted)' }}
+                  />
+                </Bar>
+              )}
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* ── Avg days in stage table ── */}
+      {avgDaysTableData.length > 0 && (
+        <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
+          <div className="mb-4">
+            <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+              Average Days in Stage
+              {ldFilter !== 'all' && (
+                <span
+                  className="ml-2 px-2 py-0.5 rounded text-xs font-medium"
+                  style={{
+                    background: ldFilter === 'lost' ? '#fef3c7' : '#fee2e2',
+                    color:      ldFilter === 'lost' ? '#c07830' : '#dc2626',
+                  }}
+                >
+                  {ldFilter === 'lost' ? 'Lost only' : 'Discarded only'}
+                </span>
+              )}
+            </div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>
+              How long deals that eventually exited the pipeline spent in each stage on average
+            </div>
+          </div>
+          <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 8 }}>
+            <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f5f7fa' }}>
+                  {['Stage', 'Avg Days in Stage', '# Deals'].map((h, i) => (
+                    <th
+                      key={h}
+                      className="px-3 py-2 text-xs font-semibold uppercase tracking-wide"
+                      style={{
+                        color:       'var(--muted)',
+                        borderBottom: '2px solid var(--rule)',
+                        textAlign:   i === 0 ? 'left' : 'right',
+                        whiteSpace:  'nowrap',
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {avgDaysTableData.map((row, i) => (
+                  <tr
+                    key={row.stage}
+                    style={{
+                      borderBottom: '1px solid var(--rule)',
+                      background:   i % 2 === 0 ? 'white' : '#f5f7fa',
+                    }}
+                  >
+                    <td className="px-3 py-2" style={{ color: 'var(--ink)', whiteSpace: 'nowrap' }}>
+                      <span
+                        style={{
+                          display:      'inline-block',
+                          width:        8,
+                          height:       8,
+                          borderRadius: '50%',
+                          background:   STAGE_COLOR_MAP[row.stage] ?? '#9ca3af',
+                          marginRight:  8,
+                          flexShrink:   0,
+                        }}
+                      />
+                      {row.shortName}
+                    </td>
+                    <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--ink)' }}>
+                      {row.avgDays}d
+                    </td>
+                    <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--muted)' }}>
+                      {row.dealCount}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
