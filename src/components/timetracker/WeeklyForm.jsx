@@ -341,7 +341,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
       </div>
 
       {/* ── DEALFLOW ── */}
-      <SectionHeader label="Dealflow" count={dealflow.length} />
+      <SectionHeader label="Dealflow - Main Opportunities" count={dealflow.length} />
       <div
         style={{
           maxHeight: dealflow.length > 8 ? 260 : undefined,
@@ -368,7 +368,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
 
       {/* ── LONGTAIL ── */}
       <SectionHeader
-        label="Longtail"
+        label="Dealflow - Longtail"
         count={longtail.length + 1}
         collapsible
         open={showLongtail}
@@ -398,7 +398,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
 
       {/* ── ORIGINATION ── */}
       <SectionHeader
-        label="Origination"
+        label="Origination Activities (Non-deal related)"
         count={origChannels.length}
         collapsible
         open={showOrig}
@@ -434,21 +434,47 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
       )}
 
       {/* ── INTERNAL ── */}
-      <SectionHeader label="Internal" count={internalLoading ? null : internalCategories.length} />
-      {internalLoading ? (
-        <LoadingSpinner />
-      ) : (
-        internalCategories.map(c => (
-          <EntryRow
-            key={c.name}
-            label={c.name}
-            type="internal"
-            categoryKey={c.name}
-            entries={entries}
-            onChange={handleChange}
-          />
-        ))
-      )}
+      {(() => {
+        const ADMIN_BUCKETS = ['Training & Development', 'Out of Office']
+        const coreInternal = internalCategories.filter(c => !ADMIN_BUCKETS.includes(c.name))
+        const adminCategories = internalCategories.filter(c => ADMIN_BUCKETS.includes(c.name))
+        return (
+          <>
+            <SectionHeader label="Internal" count={internalLoading ? null : coreInternal.length} />
+            {internalLoading ? (
+              <LoadingSpinner />
+            ) : (
+              coreInternal.map(c => (
+                <EntryRow
+                  key={c.name}
+                  label={c.name}
+                  type="internal"
+                  categoryKey={c.name}
+                  entries={entries}
+                  onChange={handleChange}
+                />
+              ))
+            )}
+
+            {/* ── ADMIN ── */}
+            <SectionHeader label="Admin" count={internalLoading ? null : adminCategories.length} />
+            {internalLoading ? (
+              <LoadingSpinner />
+            ) : (
+              adminCategories.map(c => (
+                <EntryRow
+                  key={c.name}
+                  label={c.name}
+                  type="internal"
+                  categoryKey={c.name}
+                  entries={entries}
+                  onChange={handleChange}
+                />
+              ))
+            )}
+          </>
+        )
+      })()}
 
       {/* ── FOOTER: totals + submit ── */}
       <div
