@@ -49,6 +49,11 @@ function formatAttr(attr) {
   return m ? m[1] : attr
 }
 
+function splitCaptains(raw) {
+  if (!raw) return []
+  return raw.split(/[,;]/).map(s => s.trim()).filter(Boolean)
+}
+
 function formatDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -319,15 +324,16 @@ export default function ProprietaryDealflow() {
     const pctOfTotal = totalCount > 0 ? Math.round((deals.length / totalCount) * 100) : 0
     const kamCounts = {}
     deals.forEach(d => {
-      if (!d.deal_captain) return
-      kamCounts[d.deal_captain] = (kamCounts[d.deal_captain] || 0) + 1
+      splitCaptains(d.deal_captain).forEach(name => {
+        kamCounts[name] = (kamCounts[name] || 0) + 1
+      })
     })
     const topKam = Object.entries(kamCounts).sort((a, b) => b[1] - a[1])[0]
     return {
       total:       deals.length,
       quality,
       pctOfTotal,
-      topKam:      topKam ? shortName(topKam[0]) : '—',
+      topKam:      topKam ? topKam[0] : '—',
       topKamCount: topKam ? topKam[1] : 0,
     }
   }, [deals, totalCount])
@@ -335,10 +341,13 @@ export default function ProprietaryDealflow() {
   const kamData = useMemo(() => {
     const acc = {}
     deals.forEach(d => {
-      const name = d.deal_captain ? shortName(d.deal_captain) : 'Unknown'
-      if (!acc[name]) acc[name] = { name, total: 0, quality: 0 }
-      acc[name].total++
-      if (d.is_quality_lead) acc[name].quality++
+      const captains = splitCaptains(d.deal_captain)
+      const names = captains.length > 0 ? captains : ['Unknown']
+      names.forEach(name => {
+        if (!acc[name]) acc[name] = { name, total: 0, quality: 0 }
+        acc[name].total++
+        if (d.is_quality_lead) acc[name].quality++
+      })
     })
     return Object.values(acc).sort((a, b) => b.total - a.total)
   }, [deals])
@@ -443,7 +452,7 @@ export default function ProprietaryDealflow() {
             {funnelPivot ? (
               // Pivot: grouped bar per stage, stacked by captain
               (() => {
-                const captains = [...new Set(deals.map(d => d.deal_captain ? shortName(d.deal_captain) : 'Unknown'))].sort()
+                const captains = [...new Set(deals.flatMap(d => splitCaptains(d.deal_captain).length > 0 ? splitCaptains(d.deal_captain) : ['Unknown']))].sort()
                 const captainColors = ['#1a3a2a', '#2e6da4', '#c07830', '#6b21a8', '#3a4080', '#8a5020']
                 const pivotData = FUNNEL_STAGE_ORDER
                   .filter(s => deals.some(d => d.stage === s))
@@ -451,8 +460,9 @@ export default function ProprietaryDealflow() {
                     const row = { name: FUNNEL_STAGE_LABELS[s] ?? s }
                     captains.forEach(c => { row[c] = 0 })
                     deals.filter(d => d.stage === s).forEach(d => {
-                      const c = d.deal_captain ? shortName(d.deal_captain) : 'Unknown'
-                      row[c] = (row[c] || 0) + 1
+                      const names = splitCaptains(d.deal_captain)
+                      const cs = names.length > 0 ? names : ['Unknown']
+                      cs.forEach(c => { row[c] = (row[c] || 0) + 1 })
                     })
                     return row
                   })
