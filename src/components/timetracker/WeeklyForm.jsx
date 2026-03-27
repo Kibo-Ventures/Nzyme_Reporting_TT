@@ -84,7 +84,67 @@ function EntryRow({ label, type, categoryKey, entries, onChange }) {
   )
 }
 
-function SectionHeader({ label, count, collapsible, open, onToggle }) {
+function InfoTooltip({ text }) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <span
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginLeft: 6 }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 13,
+          height: 13,
+          borderRadius: '50%',
+          border: '1.5px solid var(--muted)',
+          color: 'var(--muted)',
+          fontSize: '0.6rem',
+          fontWeight: 700,
+          lineHeight: 1,
+          cursor: 'default',
+          userSelect: 'none',
+          verticalAlign: 'middle',
+          fontStyle: 'italic',
+          fontFamily: 'serif',
+        }}
+      >
+        i
+      </span>
+      {visible && (
+        <span
+          style={{
+            position: 'absolute',
+            left: 18,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: '#2a2a2a',
+            color: '#f5f5f5',
+            fontSize: '0.75rem',
+            fontWeight: 400,
+            lineHeight: 1.45,
+            padding: '7px 10px',
+            borderRadius: 6,
+            whiteSpace: 'normal',
+            width: 240,
+            zIndex: 100,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+            textTransform: 'none',
+            letterSpacing: 0,
+            pointerEvents: 'none',
+          }}
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  )
+}
+
+function SectionHeader({ label, count, collapsible, open, onToggle, tooltip }) {
   return (
     <div
       style={{
@@ -109,6 +169,7 @@ function SectionHeader({ label, count, collapsible, open, onToggle }) {
         {count != null && (
           <span style={{ fontWeight: 400, marginLeft: 6 }}>({count})</span>
         )}
+        {tooltip && <InfoTooltip text={tooltip} />}
       </span>
       {collapsible && (
         <button
@@ -341,7 +402,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
       </div>
 
       {/* ── DEALFLOW ── */}
-      <SectionHeader label="Dealflow - Main Opportunities" count={dealflow.length} />
+      <SectionHeader label="Dealflow - Main Opportunities" count={dealflow.length} tooltip="Active deals currently being worked on — includes Under Analysis, Working on a Deal, and DD Phase stages." />
       <div
         style={{
           maxHeight: dealflow.length > 8 ? 260 : undefined,
@@ -370,6 +431,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
       <SectionHeader
         label="Dealflow - Longtail"
         count={longtail.length + 1}
+        tooltip="Deals in Affinity at 'Being Explored' stage, or not in Affinity yet. Includes the 'Other (Longtail)' catch-all for anything not yet tracked."
         collapsible
         open={showLongtail}
         onToggle={() => setShowLongtail(v => !v)}
@@ -400,6 +462,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
       <SectionHeader
         label="Origination Activities (Non-deal related)"
         count={origChannels.length}
+        tooltip="Time spent on sourcing and channel-building activities not tied to a specific deal — e.g. adviser meetings, events, outreach campaigns."
         collapsible
         open={showOrig}
         onToggle={() => setShowOrig(v => !v)}
@@ -419,7 +482,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
       {/* ── PORTFOLIO ── */}
       {portfolio.length > 0 && (
         <>
-          <SectionHeader label="Portfolio" count={portfolio.length} />
+          <SectionHeader label="Portfolio" count={portfolio.length} tooltip="Time spent on existing portfolio companies — operational support, board prep, add-on work, etc." />
           {portfolio.map(d => (
             <EntryRow
               key={d.name}
@@ -440,7 +503,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
         const adminCategories = internalCategories.filter(c => ADMIN_BUCKETS.includes(c.name))
         return (
           <>
-            <SectionHeader label="Internal" count={internalLoading ? null : coreInternal.length} />
+            <SectionHeader label="Internal" count={internalLoading ? null : coreInternal.length} tooltip="Internal firm activities — operations, recruiting, fundraising, strategy, and business development." />
             {internalLoading ? (
               <LoadingSpinner />
             ) : (
@@ -457,7 +520,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
             )}
 
             {/* ── ADMIN ── */}
-            <SectionHeader label="Admin" count={internalLoading ? null : adminCategories.length} />
+            <SectionHeader label="Admin" count={internalLoading ? null : adminCategories.length} tooltip="Personal time away from deal or firm work — training, courses, conferences, and planned time out of office." />
             {internalLoading ? (
               <LoadingSpinner />
             ) : (
