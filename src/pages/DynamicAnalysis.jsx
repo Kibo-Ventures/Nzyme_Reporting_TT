@@ -6,6 +6,8 @@ import {
 import { useAnalysisDeals } from '../hooks/useAnalysisDeals';
 import { StageBadge } from '../components/ui/Badge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import PageBanner from '../components/ui/PageBanner';
+import InfoTooltip from '../components/ui/InfoTooltip';
 
 const AXIS_OPTIONS = [
   { value: 'total_hrs',              label: 'Total Hours on Deal' },
@@ -152,7 +154,7 @@ export default function DynamicAnalysis() {
   const TABLE_COLS = [
     { col: 'deal_name',            label: 'Deal' },
     { col: 'captain',              label: 'Captain' },
-    { col: 'funnel_depth',         label: 'Stage' },
+    { col: 'funnel_depth',         label: 'Stage',          tooltip: 'A numeric score from 1–6 representing the deepest stage a deal has ever reached, regardless of its current stage.' },
     { col: 'channel_label',        label: 'Channel' },
     { col: 'total_hrs',            label: 'Hrs' },
     { col: 'avg_days_per_stage',   label: 'Avg Days/Stage' },
@@ -160,7 +162,7 @@ export default function DynamicAnalysis() {
     { col: 'equity_required',      label: 'Equity (€)' },
     { col: 'attractiveness_score', label: 'Attract. Score' },
     { col: 'ic_stage_rank',        label: 'IC Stage' },
-    { col: 'milestone_depth',      label: 'Milestone Depth' },
+    { col: 'milestone_depth',      label: 'Milestone Depth', tooltip: 'Scores 0–6 based on the most advanced milestone reached: None / NDA / IM / NBO / VDR-FAQ / MIP / Term Sheet.' },
   ];
 
   return (
@@ -174,6 +176,13 @@ export default function DynamicAnalysis() {
           Plot any two dimensions across all deals to surface patterns.
         </p>
       </div>
+
+      <PageBanner
+        summary="A free-form scatter chart — pick any two metrics and explore how deals relate to each other."
+        body="Each dot is a deal. Use the X and Y axis dropdowns to choose what to plot. Colour encodes either stage or origination channel depending on your selection. Some axes have outlier caps applied silently (e.g. avg days per stage is capped at 350) to keep the chart readable. The table below the chart shows the underlying data for all visible deals."
+        caveat="The stage filter is not applied on this page — all deals matching the date, captain, and channel filters are shown regardless of stage."
+        style={{ marginBottom: 24 }}
+      />
 
       {/* Chart card */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
@@ -286,7 +295,7 @@ export default function DynamicAnalysis() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: 'var(--font-sans)' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--rule)' }}>
-                {TABLE_COLS.map(({ col, label }) => (
+                {TABLE_COLS.map(({ col, label, tooltip }) => (
                   <th
                     key={col}
                     onClick={() => handleSort(col)}
@@ -302,6 +311,7 @@ export default function DynamicAnalysis() {
                     }}
                   >
                     {label}
+                    {tooltip && <InfoTooltip text={tooltip} />}
                     {sortCol === col ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
                   </th>
                 ))}

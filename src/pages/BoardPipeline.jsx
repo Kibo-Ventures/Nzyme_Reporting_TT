@@ -4,6 +4,7 @@ import KpiCard from '../components/ui/KpiCard'
 import { StageBadge } from '../components/ui/Badge'
 import { shortName } from '../lib/utils'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import PageBanner from '../components/ui/PageBanner'
 
 // ── Stage group definitions ───────────────────────────────────────────────────
 
@@ -344,9 +345,16 @@ export default function BoardPipeline() {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
       {/* Header */}
-      <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '1.5rem' }}>
+      <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '0.75rem' }}>
         Board Pipeline
       </h1>
+
+      <PageBanner
+        summary="A snapshot of every active deal, grouped by current stage."
+        body="This page shows all deals currently sitting in your active pipeline. Stages run from 'Being Explored' through to 'Portfolio'. The date filter is disabled here — you're always looking at the current state, not a historical slice. Use the Stage and Deal Captain filters to focus on a subset."
+        caveat="Date range filter is disabled on this page — it always reflects the current pipeline state."
+        style={{ marginBottom: '1.25rem' }}
+      />
 
       {/* KPI row */}
       <div

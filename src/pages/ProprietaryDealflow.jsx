@@ -11,6 +11,8 @@ import KpiCard from '../components/ui/KpiCard'
 import { StageBadge } from '../components/ui/Badge'
 import { shortName } from '../lib/utils'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import PageBanner from '../components/ui/PageBanner'
+import InfoTooltip from '../components/ui/InfoTooltip'
 
 // ── Stage funnel order ────────────────────────────────────────────────────────
 
@@ -371,13 +373,23 @@ export default function ProprietaryDealflow() {
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-      <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '1.5rem' }}>
+      <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '0.75rem' }}>
         Proprietary Dealflow
       </h1>
 
+      <PageBanner
+        summary="Tracks deals originated directly by the team, measured against an annual target."
+        body="Only deals where the origination channel is marked as proprietary are counted here. The annual target is 36 deals (3 per month), pro-rated automatically when you select YTD or a custom date range. The donut shows progress against that pro-rated goal."
+        style={{ marginBottom: 24 }}
+      />
+
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        <KpiCard title="Proprietary Deals"  value={kpis.total}           subtitle={`goal: ${goal}`} />
+        <KpiCard
+          title={<>Proprietary Deals <InfoTooltip text="Annual target of 36 deals, pro-rated to the selected date range. YTD uses months elapsed; custom ranges use calendar days." /></>}
+          value={kpis.total}
+          subtitle={`goal: ${goal}`}
+        />
         <KpiCard title="% of Total Dealflow" value={`${kpis.pctOfTotal}%`} subtitle="excl. adviser-sourced" />
         <KpiCard title="Quality Leads"       value={kpis.quality}         subtitle="High or Med-High priority" />
         <KpiCard title="Top Deal Captain"    value={kpis.topKam}          subtitle={kpis.topKam !== '—' ? `${kpis.topKamCount} deal${kpis.topKamCount !== 1 ? 's' : ''}` : 'no data'} />

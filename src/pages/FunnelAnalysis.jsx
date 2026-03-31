@@ -14,6 +14,8 @@ import {
 } from '../hooks/useFunnelAnalysis'
 import KpiCard from '../components/ui/KpiCard'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import PageBanner from '../components/ui/PageBanner'
+import InfoTooltip from '../components/ui/InfoTooltip'
 
 // ── Stage display helpers ────────────────────────────────────────────────────
 
@@ -472,6 +474,12 @@ export default function FunnelAnalysis() {
         </p>
       </div>
 
+      <PageBanner
+        summary="Shows how deals have moved through the pipeline stages over all time."
+        body="This page always shows all-time data — the date filter is intentionally disabled because funnel conversion rates are only meaningful across the full dataset. Each stage bar shows the cumulative count of deals that reached or passed that stage, not just deals currently sitting in it. Clicking a stage row expands a time-in-stage histogram."
+        caveat="Date range filter is disabled — this page always reflects all-time data."
+      />
+
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-4 gap-4">
         <KpiCard
@@ -589,13 +597,23 @@ export default function FunnelAnalysis() {
           <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--accent-light)' }}>
-                {['Stage', 'Reached', "Didn't Advance", 'Cumul. Conv. %', 'Stage-to-Stage %', 'Median Days', 'Total Hrs', 'Avg Hrs to Progress'].map((h) => (
+                {[
+                  { label: 'Stage' },
+                  { label: 'Reached' },
+                  { label: "Didn't Advance" },
+                  { label: 'Cumul. Conv. %', tooltip: 'The % of all deals ever seen that made it to this stage or beyond. Not stage-to-stage — it\'s always relative to total deals entered.' },
+                  { label: 'Stage-to-Stage %' },
+                  { label: 'Median Days', tooltip: 'Average number of days deals spent in this stage before moving on or stalling.' },
+                  { label: 'Total Hrs' },
+                  { label: 'Avg Hrs to Progress' },
+                ].map(({ label, tooltip }) => (
                   <th
-                    key={h}
+                    key={label}
                     className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide"
                     style={{ color: 'var(--muted)', borderBottom: '1px solid var(--rule)' }}
                   >
-                    {h}
+                    {label}
+                    {tooltip && <InfoTooltip text={tooltip} />}
                   </th>
                 ))}
               </tr>

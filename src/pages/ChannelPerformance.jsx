@@ -6,6 +6,8 @@ import {
 import { useChannelDeals, useChannelCosts, useChannelCostActuals, useChannelOrigEntries } from '../hooks/useChannelPerformance'
 import KpiCard from '../components/ui/KpiCard'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import PageBanner from '../components/ui/PageBanner'
+import InfoTooltip from '../components/ui/InfoTooltip'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -79,7 +81,7 @@ const COLS = [
   { key: 'channel',           label: 'Channel',                  align: 'left' },
   { key: 'leads',             label: 'Leads',                    align: 'right' },
   { key: 'quality',           label: 'Quality Leads',            align: 'right' },
-  { key: 'qualityRate',       label: '% Quality',                align: 'right' },
+  { key: 'qualityRate',       label: '% Quality',                align: 'right',  tooltip: '% of leads rated High or Medium-High attractiveness out of total leads for that channel.' },
   { key: 'avgPriority',       label: 'Avg Priority',             align: 'right' },
   { key: 'nboCount',          label: 'NBOs',                     align: 'right' },
   { key: 'totalHours',        label: 'Total Hours',              align: 'right' },
@@ -135,6 +137,7 @@ function ChannelTable({ rows }) {
                 onClick={() => toggleSort(col.key)}
               >
                 {col.label}
+                {col.tooltip && <InfoTooltip text={col.tooltip} />}
                 <SortIcon active={sortKey === col.key} dir={sortDir} />
               </th>
             ))}
@@ -381,15 +384,25 @@ export default function ChannelPerformance() {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-      <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '1.5rem' }}>
+      <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '0.75rem' }}>
         Channel Performance
       </h1>
+
+      <PageBanner
+        summary="Compares origination channels by volume, quality, and cost efficiency."
+        body="Each row is an origination channel. Costs combine two sources: one-off costs entered manually, and time-based costs calculated from hours logged against that channel multiplied by team rates and seniority multipliers. 'Unattributed' covers deals with no channel set. NBO count is based on the Milestones field containing 'NBO Sent'."
+        style={{ marginBottom: 24 }}
+      />
 
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <KpiCard title="Total Leads"       value={kpis.totalLeads}   subtitle="in selected period" />
         <KpiCard title="Quality Leads"     value={kpis.totalQuality} subtitle="High or Med-High priority" />
-        <KpiCard title="Quality Rate"      value={`${kpis.qualityRate}%`} subtitle="quality / total" />
+        <KpiCard
+          title={<>Quality Rate <InfoTooltip text="% of leads rated High or Medium-High attractiveness out of total leads for that channel." /></>}
+          value={`${kpis.qualityRate}%`}
+          subtitle="quality / total"
+        />
         <KpiCard title="Best Channel"      value={kpis.bestChannel.length > 18 ? kpis.bestChannel.slice(0, 16) + '…' : kpis.bestChannel}
                                            subtitle={`${kpis.bestQuality} quality lead${kpis.bestQuality !== 1 ? 's' : ''}`} />
       </div>

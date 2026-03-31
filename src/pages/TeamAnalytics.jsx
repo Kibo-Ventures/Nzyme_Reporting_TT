@@ -8,6 +8,8 @@ import { shortName } from '../lib/utils'
 import { useDealStageMap, useTimeframeEntries, useLifetimeHoursEntries } from '../hooks/useTeamAnalytics'
 import { useStageTimeInvestment } from '../hooks/useFunnelAnalysis'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import PageBanner from '../components/ui/PageBanner'
+import InfoTooltip from '../components/ui/InfoTooltip'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -563,6 +565,12 @@ export default function TeamAnalytics() {
         <TimeframeToggle value={timeframe} onChange={setTimeframe} />
       </div>
 
+      <PageBanner
+        summary="Shows how the team is allocating time across deals and internal work, week by week."
+        body="Data comes from the weekly time tracker entries. Hours are calculated from the percentage logged multiplied by a weekly hour assumption that varies by intensity (light = 40h, normal = 55h, intense = 70h). Lifetime hours include all entries ever logged, regardless of date filter. The date filter and channel filter are hidden on this page."
+        style={{ marginBottom: 28 }}
+      />
+
       {isLoading && <LoadingSpinner />}
 
       {!isLoading && (
@@ -689,7 +697,7 @@ export default function TeamAnalytics() {
 
           {/* ── Row 3: Lifetime Hours by Deal — full width ── */}
           <ChartCard
-            title="Lifetime Hours by Deal"
+            title={<>Lifetime Hours by Deal <InfoTooltip text="Derived from % logged × weekly hour assumption. Varies by intensity setting (light / normal / intense)." /></>}
             description="Cumulative actual hours invested per deal across all time. Click a stage to filter."
           >
             <StageFilterPills filters={lifetimeFilters} onChange={setLifetimeFilters} />

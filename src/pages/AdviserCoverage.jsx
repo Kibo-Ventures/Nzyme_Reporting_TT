@@ -8,6 +8,8 @@ import KpiCard from '../components/ui/KpiCard'
 import { TierBadge, StageBadge } from '../components/ui/Badge'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { shortName } from '../lib/utils'
+import PageBanner from '../components/ui/PageBanner'
+import InfoTooltip from '../components/ui/InfoTooltip'
 
 // ── Colour helpers ──────────────────────────────────────────────────────────
 
@@ -408,6 +410,12 @@ export default function AdviserCoverage() {
         </label>
       </div>
 
+      <PageBanner
+        summary="Tracks dealflow from your adviser programme, by firm and KAM."
+        body="Only deals where origination channel is 'Adviser Programme' are shown by default. Toggle 'Include Untiered' to also show deals from Untiered Connections. Firms are grouped under the KAM responsible for the relationship. Quality rate is colour-coded: green ≥ 20%, amber 5–20%, red below 5%."
+        caveat="'No Adviser Data' rows are always shown but excluded from the KPI totals at the top."
+      />
+
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-4 gap-4">
         <KpiCard
@@ -421,7 +429,7 @@ export default function AdviserCoverage() {
           subtitle="attractiveness 1–2"
         />
         <KpiCard
-          title="Quality Rate"
+          title={<>Quality Rate <InfoTooltip text="Deals rated High or Medium-High attractiveness. Deals with no attractiveness set are not counted." /></>}
           value={`${kpis.rate}%`}
           subtitle="quality / total LTM"
         />
