@@ -15,7 +15,7 @@ export function useBoardPipelineDeals() {
       let query = supabase
         .from('ReportingNz_deals')
         .select(
-          'name, stage, deal_captain, activity_description, revenues, ebitda, ic_stage, milestones, attractiveness, date_added, origination_channel, team_involved'
+          'name, stage, deal_captain, activity_description, revenue_m, ebitda_m, ic_stage, milestones, attractiveness, date_added, origination_channel, team_involved'
         )
         .eq('is_active', true)
         .order('date_added', { ascending: false })

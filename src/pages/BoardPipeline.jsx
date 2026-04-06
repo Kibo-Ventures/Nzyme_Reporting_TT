@@ -34,6 +34,8 @@ const COL = {
   name:        { flex: '1 1 160px', minWidth: 140 },
   captain:     { width: 96,  flexShrink: 0 },
   description: { flex: '1.6 1 120px', minWidth: 100 },
+  revenue:     { width: 80,  flexShrink: 0 },
+  ebitda:      { width: 80,  flexShrink: 0 },
   icStage:     { width: 108, flexShrink: 0 },
   milestone:   { width: 120, flexShrink: 0 },
 }
@@ -173,6 +175,16 @@ function DealRow({ deal, expanded, onToggle }) {
           {deal.activity_description || '—'}
         </div>
 
+        {/* Revenue */}
+        <div style={{ ...COL.revenue, fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--muted)', textAlign: 'right' }}>
+          {deal.revenue_m != null ? `€${deal.revenue_m}m` : '—'}
+        </div>
+
+        {/* EBITDA */}
+        <div style={{ ...COL.ebitda, fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--muted)', textAlign: 'right' }}>
+          {deal.ebitda_m != null ? `€${deal.ebitda_m}m` : '—'}
+        </div>
+
         {/* IC Stage */}
         <div style={{ ...COL.icStage, fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {deal.ic_stage || '—'}
@@ -270,6 +282,8 @@ function ColumnHeaders() {
     { label: 'Deal', style: COL.name },
     { label: 'Captain', style: COL.captain },
     { label: 'Description', style: COL.description },
+    { label: 'Revenue', style: { ...COL.revenue, textAlign: 'right' } },
+    { label: 'EBITDA', style: { ...COL.ebitda, textAlign: 'right' } },
     { label: 'IC Stage', style: COL.icStage },
     { label: 'Last Milestone', style: COL.milestone },
   ]
