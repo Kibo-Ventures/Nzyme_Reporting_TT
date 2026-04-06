@@ -89,7 +89,7 @@ function MemoTable({ deals }) {
         <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--accent-light)' }}>
-              {['Deal Name', 'Attractiveness', 'Introducer', 'Adviser', 'Date', 'Deal Captain', 'Description'].map((h) => (
+              {['Deal Name', 'Stage', 'Attractiveness', 'Introducer', 'Adviser', 'Deal Captain', 'Description'].map((h) => (
                 <th
                   key={h}
                   className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide"
@@ -115,19 +115,15 @@ function MemoTable({ deals }) {
                 <td className="px-3 py-2">
                   <StageBadge stage={d.stage} short />
                 </td>
+                <td className="px-3 py-2" style={{ color: 'var(--muted)', fontSize: '0.8125rem' }}>
+                  {d.attractiveness || '—'}
+                </td>
                 <td className="px-3 py-2" style={{ color: 'var(--muted)' }}>
                   {d.introducer || '—'}
                 </td>
                 <td className="px-3 py-2">
                   {d.tier ? <TierBadge tier={d.tier} /> : null}
                   <span className="ml-1" style={{ color: 'var(--ink)' }}>{d.attributed_adviser || '—'}</span>
-                </td>
-                <td className="px-3 py-2" style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>
-                  {d.date_added
-                    ? new Date(d.date_added).toLocaleDateString('en-GB', {
-                        day: 'numeric', month: 'short', year: 'numeric',
-                      })
-                    : '—'}
                 </td>
                 <td className="px-3 py-2" style={{ color: 'var(--ink)' }}>
                   {d.kam ? shortName(d.kam) : '—'}
@@ -219,43 +215,30 @@ function AdviserGroupTable({ grouped }) {
 
 export default function AdviserCoverage() {
   const { data: allDeals = [], isLoading, error } = useAdviserDeals()
-  const [showUntiered, setShowUntiered]   = useState(false)
   const [chartPivot, setChartPivot]       = useState('By Volume')
   const [sortKey, setSortKey]             = useState('leads')
   const [sortDir, setSortDir]             = useState('desc')
 
   // ── Filter to visible buckets ──────────────────────────────────────────────
-  const visibleDeals = useMemo(() => {
-    const buckets = new Set(['Adviser Programme'])
-    if (showUntiered) buckets.add('Untiered Connection')
-    // No Adviser Data is always shown as a group in the table but excluded from KPIs
-    return allDeals.filter((d) => buckets.has(d.programme_bucket) || d.programme_bucket === 'No Adviser Data')
-  }, [allDeals, showUntiered])
+  // Always include all adviser-attributed deals regardless of tier.
+  // No Adviser Data is always shown in the table but excluded from KPIs.
+  const visibleDeals = useMemo(() => allDeals, [allDeals])
 
-  // LTM subset for KPIs
-  const ltmDeals = useMemo(
-    () => visibleDeals.filter((d) => d.is_ltm && d.programme_bucket !== 'No Adviser Data'),
+  // Deals within the selected date range, excluding No Adviser Data rows (used for KPIs)
+  const kpiDeals = useMemo(
+    () => visibleDeals.filter((d) => d.programme_bucket !== 'No Adviser Data'),
     [visibleDeals]
   )
 
-  // ── All-time total for KPI card ────────────────────────────────────────────
-  const totalDealsAllTime = useMemo(() =>
-    allDeals.filter(d =>
-      d.programme_bucket === 'Adviser Programme' ||
-      d.programme_bucket === 'No Adviser Data' ||
-      (showUntiered && d.programme_bucket === 'Untiered Connection')
-    ).length,
-  [allDeals, showUntiered])
-
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
-    const total   = ltmDeals.length
-    const quality = ltmDeals.filter((d) => d.is_quality_lead).length
+    const total   = kpiDeals.length
+    const quality = kpiDeals.filter((d) => d.is_quality_lead).length
     const rate    = total > 0 ? Math.round((quality / total) * 100) : 0
 
-    // Most active adviser by LTM leads (excluding No Adviser Data)
+    // Most active adviser by leads (excluding No Adviser Data)
     const adviserCounts = {}
-    for (const d of ltmDeals) {
+    for (const d of kpiDeals) {
       const a = d.attributed_adviser
       if (a && a !== 'No Adviser Data') {
         adviserCounts[a] = (adviserCounts[a] ?? 0) + 1
@@ -264,17 +247,15 @@ export default function AdviserCoverage() {
     const topAdviser = Object.entries(adviserCounts).sort((a, b) => b[1] - a[1])[0]
 
     return { total, quality, rate, topAdviser }
-  }, [ltmDeals])
+  }, [kpiDeals])
 
   // ── Chart data ─────────────────────────────────────────────────────────────
   const chartData = useMemo(() => {
     // By Volume / By Quality → per-adviser bar
     // By KAM → per-KAM bar
-    const ltmOnly = allDeals.filter((d) => d.is_ltm && d.programme_bucket !== 'No Adviser Data')
-
     if (chartPivot === 'By KAM') {
       const map = {}
-      for (const d of ltmOnly) {
+      for (const d of kpiDeals) {
         const k = d.attributed_kam || 'Unknown'
         if (!map[k]) map[k] = { name: shortName(k), leads: 0, quality: 0 }
         map[k].leads++
@@ -285,27 +266,22 @@ export default function AdviserCoverage() {
 
     // Per adviser
     const map = {}
-    for (const d of ltmOnly) {
+    for (const d of kpiDeals) {
       const a = d.attributed_adviser || 'Unknown'
       if (!map[a]) map[a] = { name: a, leads: 0, quality: 0 }
       map[a].leads++
       if (d.is_quality_lead) map[a].quality++
     }
     return Object.values(map).sort((a, b) => b.leads - a.leads).slice(0, 20)
-  }, [allDeals, chartPivot])
+  }, [kpiDeals, chartPivot])
 
   // ── Grouped table (KAM → adviser) ─────────────────────────────────────────
   const grouped = useMemo(() => {
     // Build Map<kam, Map<adviser, {tier, leads, quality}>>
-    // Include visible buckets; No Adviser Data always shown at bottom per KAM
+    // All adviser-attributed deals included regardless of tier; No Adviser Data shown at bottom per KAM
     const kamMap = new Map()
 
-    const buckets = new Set(['Adviser Programme'])
-    if (showUntiered) buckets.add('Untiered Connection')
-
     for (const d of allDeals) {
-      const isNoData = d.programme_bucket === 'No Adviser Data'
-      if (!isNoData && !buckets.has(d.programme_bucket)) continue
 
       const kam = d.attributed_kam || 'Unknown KAM'
       const adviser = d.attributed_adviser || 'No Adviser Data'
@@ -342,20 +318,16 @@ export default function AdviserCoverage() {
         })
     )
     return sorted
-  }, [allDeals, showUntiered])
+  }, [allDeals])
 
   // ── Memo table deals ──────────────────────────────────────────────────────
   const memoDeals = useMemo(() => {
-    const buckets = new Set(['Adviser Programme'])
-    if (showUntiered) buckets.add('Untiered Connection')
-    return allDeals
-      .filter((d) => d.is_ltm && buckets.has(d.programme_bucket))
-      .sort((a, b) => {
-        const ra = DEAL_STAGE_RANK[a.stage] ?? 999
-        const rb = DEAL_STAGE_RANK[b.stage] ?? 999
-        return ra - rb
-      })
-  }, [allDeals, showUntiered])
+    return kpiDeals.sort((a, b) => {
+      const ra = DEAL_STAGE_RANK[a.stage] ?? 999
+      const rb = DEAL_STAGE_RANK[b.stage] ?? 999
+      return ra - rb
+    })
+  }, [kpiDeals])
 
   // ── Sortable channel summary rows (for the per-adviser sort) ──────────────
   const handleSort = (key) => {
@@ -394,20 +366,6 @@ export default function AdviserCoverage() {
             Performance of the formal adviser programme
           </p>
         </div>
-        {/* Untiered toggle */}
-        <label className="flex items-center gap-2 text-sm cursor-pointer select-none" style={{ color: 'var(--ink)' }}>
-          <span
-            onClick={() => setShowUntiered((v) => !v)}
-            className="relative inline-block w-10 h-5 rounded-full transition-colors"
-            style={{ background: showUntiered ? 'var(--accent)' : 'var(--rule)', cursor: 'pointer' }}
-          >
-            <span
-              className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform shadow-sm"
-              style={{ transform: showUntiered ? 'translateX(20px)' : 'translateX(0)' }}
-            />
-          </span>
-          Include Untiered Connections
-        </label>
       </div>
 
       <PageBanner
@@ -420,23 +378,23 @@ export default function AdviserCoverage() {
       <div className="grid grid-cols-4 gap-4">
         <KpiCard
           title="Total Adviser Deals"
-          value={totalDealsAllTime}
-          subtitle="all-time, incl. unattributed"
+          value={kpis.total}
+          subtitle="within selected period"
         />
         <KpiCard
-          title="Quality Leads LTM"
+          title="Quality Leads"
           value={kpis.quality}
           subtitle="attractiveness 1–2"
         />
         <KpiCard
           title={<>Quality Rate <InfoTooltip text="Deals rated High or Medium-High attractiveness. Deals with no attractiveness set are not counted." /></>}
           value={`${kpis.rate}%`}
-          subtitle="quality / total LTM"
+          subtitle="quality / total"
         />
         <KpiCard
           title="Most Active Adviser"
           value={kpis.topAdviser ? kpis.topAdviser[0] : '—'}
-          subtitle={kpis.topAdviser ? `${kpis.topAdviser[1]} leads LTM` : 'no LTM data'}
+          subtitle={kpis.topAdviser ? `${kpis.topAdviser[1]} leads` : 'no data'}
         />
       </div>
 
@@ -445,7 +403,7 @@ export default function AdviserCoverage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-              Dealflow per Adviser (LTM)
+              Dealflow per Adviser
             </div>
             <div className="text-xs" style={{ color: 'var(--muted)' }}>
               {chartLabel} by {chartPivot === 'By KAM' ? 'KAM' : 'adviser'}

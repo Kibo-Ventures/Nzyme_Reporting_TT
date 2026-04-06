@@ -322,7 +322,7 @@ export default function FunnelAnalysis() {
     // avgDays only from DB view (not available when filtered)
     const avgDays = filteredStages
       ? null
-      : stages.reduce((sum, s) => sum + (s.median_days_in_stage ?? 0), 0)
+      : stages.filter(s => s.stage_value !== 'Portfolio').reduce((sum, s) => sum + (s.median_days_in_stage ?? 0), 0)
     return { entry, portfolio, convRate, avgDays: avgDays != null ? Math.round(avgDays) : null }
   }, [activeStages, filteredStages, stages])
 
@@ -500,7 +500,7 @@ export default function FunnelAnalysis() {
         <KpiCard
           title="Median Days to Portfolio"
           value={kpis.avgDays ?? '—'}
-          subtitle="sum of median time per stage"
+          subtitle="sum of median time across pre-portfolio stages"
         />
       </div>
 
@@ -760,7 +760,7 @@ export default function FunnelAnalysis() {
         <KpiCard
           title="Deals Lost"
           value={ldKpis.totalLost ?? '—'}
-          subtitle="lost_reason populated"
+          subtitle='In stage "Lost"'
         />
         <KpiCard
           title="Median Days → Lost"
@@ -770,7 +770,7 @@ export default function FunnelAnalysis() {
         <KpiCard
           title="Deals Discarded"
           value={ldKpis.totalDiscarded ?? '—'}
-          subtitle="discarded_reason populated"
+          subtitle='In stage "Discarded"'
         />
         <KpiCard
           title="Median Days → Discarded"

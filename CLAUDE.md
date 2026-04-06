@@ -147,6 +147,13 @@ Built from `ReportingNz_deals` + `ReportingNz_time_entries` + `ReportingNz_deal_
 | `avg_days_per_stage` | numeric | Avg of `days_in_stage` from stage history |
 | `stage_transition_count` | int | Count of stage history rows |
 | `ever_advanced` | bool | `stage_transition_count > 1` |
+| `equity_required` | numeric | `d.total_equity_required` |
+| `attractiveness_score` | int | Generated 1–5 score |
+| `ic_stage_rank` | int | 0–3 mapped from `d.ic_stage` |
+| `milestone_depth` | int | 0–6 based on milestone text |
+| `milestone_count` | int | Count of milestones |
+| `revenue_m` | numeric | `d.revenue_m` (€m) |
+| `ebitda_m` | numeric | `d.ebitda_m` (€m) |
 
 #### Funnel depth mapping
 
@@ -214,12 +221,13 @@ All raw `stage` values from Affinity CRM:
 
 ---
 
-### Board Pipeline (`/pipeline`)
+### Board View (`/pipeline`)
 
 - Current-state snapshot; NOT date-filtered; always `is_active = true`
 - **Stage groups in order**: Portfolio → DD Phase → Working on a Deal → Under Analysis → Being Explored → Dormant
-- **Deal row columns**: Name, Captain, Description (`activity_description`), IC Stage, Last Milestone
+- **Deal row columns**: Name, Captain, Description (`activity_description`), Revenue (`revenue_m`), EBITDA (`ebitda_m`), IC Stage, Last Milestone
   - Last Milestone logic: checks milestones field for "NBO Sent" → "NDA Signed" → "IM Received" (first match wins)
+  - Revenue and EBITDA render as `€{value}m` or `—` when null; right-aligned monospace
 - **Expanded detail panel**: `activity_description`, `team_involved`, full milestones, captain, IC stage, `date_added`
 - Date range filter disabled
 
@@ -246,6 +254,7 @@ All raw `stage` values from Affinity CRM:
 - Costs from two sources: `ReportingNz_channel_costs` (one_off) + `ReportingNz_channel_cost_actuals` (time-based)
 - "Unattributed" row for null channels
 - **Horizontal bar chart**: toggle Volume / Quality / Cost Efficiency
+- KPI card "Most Quality Leads" shows the best channel by quality lead count
 - Quality leads memo list (top 10 + show all)
 
 ---
@@ -253,11 +262,12 @@ All raw `stage` values from Affinity CRM:
 ### Adviser Coverage (`/advisers`)
 
 - **Source**: `ReportingNz_adviser_deals` view only; never raw deals table
-- Default: `programme_bucket = 'Adviser Programme'`; toggle to include Untiered Connection
+- All `programme_bucket` values included (Adviser Programme + Untiered Connection); no toggle
+- "No Adviser Data" rows always shown in the grouped table but excluded from KPI totals
+- All KPIs (total deals, quality leads, quality rate, top adviser) follow the global date filter — no hardcoded LTM
 - Grouped KAM → Adviser table; quality % color-coded (green ≥20%, amber 5–20%, red <5%)
-- "No Adviser Data" row always visible, excluded from KPIs
 - **Horizontal bar**: dealflow per adviser (top 20), toggle Volume / Quality / By KAM
-- LTM deal log sorted by stage
+- **Deal log columns**: Deal Name, Stage (StageBadge), Attractiveness (raw label e.g. "1 - High"), Introducer, Adviser, Deal Captain, Description — sorted by stage rank
 - Channel filter hidden in FilterBar (`hideChannel={true}`)
 
 ---
@@ -270,14 +280,18 @@ All raw `stage` values from Affinity CRM:
 - **Stats table**: Reached, Didn't Advance, Cumul. Conv. %, Stage-to-Stage %, Avg Days, Total Hrs, Avg Hrs to Progress
 - Click stage row → expands time-in-stage histogram (buckets: 0–7d, 8–14d, 15–30d, 31–60d, 61–90d, 91–180d, 180d+)
 - **Time invested section**: hours per deal × stage from `ReportingNz_stage_time_investment`
+- **Median Days to Portfolio** KPI: sums `median_days_in_stage` across pre-portfolio stages only (Portfolio stage excluded — time spent post-investment is not counted)
+- **Deals Lost** KPI: count of all deals with `stage = 'Lost'` regardless of `lost_reason`
+- **Deals Discarded** KPI: count of all deals with `stage = 'Discarded'` regardless of `discarded_reason`
 
 ---
 
 ### Dynamic Analysis (`/analysis`)
 
 - **Source**: `ReportingNz_deal_analysis` view via `useAnalysisDeals()`
-- Scatter chart — user picks X and Y axes independently from 10 dimensions; colour-by Stage or Channel
-- **AXIS_OPTIONS** (10 variables):
+- Scatter chart — user picks X and Y axes independently from 12 dimensions; colour-by Stage or Channel
+- **Default axes**: X = `funnel_depth`, Y = `avg_days_per_stage`
+- **AXIS_OPTIONS** (12 variables):
 
 | Value | Label | Notes |
 |---|---|---|
@@ -287,13 +301,15 @@ All raw `stage` values from Affinity CRM:
 | `deal_lifespan_days` | Deal Lifespan (days) | |
 | `stage_transition_count` | Number of Stage Transitions | |
 | `equity_required` | Equity Required (€m) | |
+| `revenue_m` | Revenue (€m) | from `d.revenue_m` |
+| `ebitda_m` | EBITDA (€m) | from `d.ebitda_m` |
 | `attractiveness_score` | Attractiveness Score | domain 0–5 |
 | `ic_stage_rank` | IC Stage | 0–3 → Pre-checklist / Checklist / First IC / 2+ ICs |
 | `milestone_depth` | Milestone Depth | 0–6 → None / NDA / IM / NBO / VDR-FAQ / MIP / TS |
 | `milestone_count` | Milestone Count | |
 
 - `filterMax` on an axis option silently drops deals that exceed the cap (outlier protection)
-- **Deal Breakdown table**: 11 columns, sortable, 8 rows default, "Show all" toggle
+- **Deal Breakdown table**: 13 columns (includes Revenue (€m) and EBITDA (€m)), sortable, 8 rows default, "Show all" toggle
 - **Filters applied**: date range (on `date_added`), dealCaptain (on `captain`), channel (ilike on `channel_label`); stage filter not applied
 - `useAnalysisDeals` queryKey includes `[dateRange, dateFrom, dateTo, dealCaptain, channel]`
 

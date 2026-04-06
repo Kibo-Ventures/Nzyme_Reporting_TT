@@ -403,7 +403,7 @@ export default function ChannelPerformance() {
           value={`${kpis.qualityRate}%`}
           subtitle="quality / total"
         />
-        <KpiCard title="Best Channel"      value={kpis.bestChannel.length > 18 ? kpis.bestChannel.slice(0, 16) + '…' : kpis.bestChannel}
+        <KpiCard title="Most Quality Leads" value={kpis.bestChannel.length > 18 ? kpis.bestChannel.slice(0, 16) + '…' : kpis.bestChannel}
                                            subtitle={`${kpis.bestQuality} quality lead${kpis.bestQuality !== 1 ? 's' : ''}`} />
       </div>
 

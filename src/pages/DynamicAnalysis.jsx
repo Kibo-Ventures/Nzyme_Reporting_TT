@@ -100,8 +100,8 @@ const selectStyle = {
 const numCell = { padding: '9px 10px', fontFamily: 'var(--font-mono)', color: 'var(--ink)', fontSize: 12 };
 
 export default function DynamicAnalysis() {
-  const [xAxis, setXAxis] = useState('total_hrs');
-  const [yAxis, setYAxis] = useState('funnel_depth');
+  const [xAxis, setXAxis] = useState('funnel_depth');
+  const [yAxis, setYAxis] = useState('avg_days_per_stage');
   const [colorBy, setColorBy] = useState('funnel_depth_label');
   const [sortCol, setSortCol] = useState('funnel_depth');
   const [sortDir, setSortDir] = useState('desc');

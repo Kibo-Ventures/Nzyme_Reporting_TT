@@ -4,7 +4,7 @@ import { NavLink } from 'react-router-dom'
 const navItems = [
   { to: '/timetracker', label: 'Time Tracker',    icon: '⏱', group: null },
   { to: '/team',        label: 'Team Analytics',  icon: '📈', group: 'TEAM' },
-  { to: '/pipeline',    label: 'Board Pipeline',  icon: '📋', group: 'REPORTING' },
+  { to: '/pipeline',    label: 'Board View',      icon: '📋', group: 'REPORTING' },
   { to: '/proprietary', label: 'Proprietary',         icon: '🎯', group: 'REPORTING' },
   { to: '/channels',    label: 'Channels',            icon: '📊', group: 'REPORTING' },
   { to: '/advisers',    label: 'Adviser Coverage',    icon: '🤝', group: 'REPORTING' },
