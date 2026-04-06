@@ -68,10 +68,10 @@ export default function Sidebar() {
                   {item.group}
                   {item.group === 'REPORTING' && (
                     <span
-                      className="ml-2 px-1 text-xs font-semibold rounded"
-                      style={{ background: 'var(--orig-bg)', color: 'var(--orig-fg)', letterSpacing: 'normal', fontFamily: 'DM Mono, monospace' }}
+                      className="ml-2 px-1.5 text-xs rounded"
+                      style={{ background: 'var(--rule)', color: 'var(--muted)', letterSpacing: 'normal', fontFamily: 'DM Mono, monospace', fontWeight: 500 }}
                     >
-                      WIP
+                      Beta
                     </span>
                   )}
                 </div>
