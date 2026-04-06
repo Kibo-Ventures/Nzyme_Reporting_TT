@@ -1,7 +1,19 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 export default function InfoTooltip({ text }) {
   const [visible, setVisible] = useState(false)
+  const [coords, setCoords] = useState({ top: 0, left: 0 })
+  const iconRef = useRef(null)
+
+  useEffect(() => {
+    if (visible && iconRef.current) {
+      const rect = iconRef.current.getBoundingClientRect()
+      setCoords({
+        top: rect.top + window.scrollY - 8,
+        left: rect.left + rect.width / 2 + window.scrollX,
+      })
+    }
+  }, [visible])
 
   return (
     <span
@@ -11,6 +23,7 @@ export default function InfoTooltip({ text }) {
     >
       {/* ⓘ icon */}
       <span
+        ref={iconRef}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -31,14 +44,14 @@ export default function InfoTooltip({ text }) {
         i
       </span>
 
-      {/* Tooltip bubble */}
+      {/* Tooltip bubble — fixed positioned to escape overflow containers */}
       {visible && (
         <span
           style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            position: 'fixed',
+            top: coords.top,
+            left: coords.left,
+            transform: 'translate(-50%, -100%)',
             marginBottom: 6,
             width: 220,
             background: 'var(--paper)',
@@ -48,7 +61,7 @@ export default function InfoTooltip({ text }) {
             fontSize: '0.75rem',
             color: 'var(--ink)',
             lineHeight: 1.5,
-            zIndex: 50,
+            zIndex: 9999,
             pointerEvents: 'none',
             boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             fontWeight: 400,
