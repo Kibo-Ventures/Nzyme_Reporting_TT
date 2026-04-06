@@ -157,6 +157,27 @@ function MemoTable({ deals }) {
 
 function AdviserGroupTable({ grouped }) {
   // grouped: Map<kam, Map<adviser, { tier, leads, quality }>>
+  // Separate normal rows from "No Adviser Data" rows; No Adviser Data renders at absolute bottom.
+  const normalRows = []
+  const noDataRows = []
+
+  for (const [kam, advisers] of grouped.entries()) {
+    let firstInKam = true
+    for (const [adviser, stats] of advisers.entries()) {
+      if (adviser === 'No Adviser Data') {
+        noDataRows.push({ kam, stats })
+      } else {
+        normalRows.push({ kam, adviser, stats, firstInKam })
+        firstInKam = false
+      }
+    }
+  }
+
+  const allRows = [
+    ...normalRows,
+    ...noDataRows.map((r) => ({ ...r, adviser: 'No Adviser Data', firstInKam: true })),
+  ]
+
   return (
     <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--rule)' }}>
       <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
@@ -174,37 +195,36 @@ function AdviserGroupTable({ grouped }) {
           </tr>
         </thead>
         <tbody>
-          {[...grouped.entries()].flatMap(([kam, advisers], ki) =>
-            [...advisers.entries()].map(([adviser, stats], ai) => {
-              const pct = stats.leads > 0 ? Math.round((stats.quality / stats.leads) * 100) : null
-              return (
-                <tr
-                  key={`${kam}|${adviser}`}
-                  style={{
-                    borderBottom: '1px solid var(--rule)',
-                    background: (ki + ai) % 2 === 0 ? 'white' : '#f5f7fa',
-                  }}
-                >
-                  <td className="px-3 py-2 font-medium" style={{ color: 'var(--ink)' }}>
-                    {ai === 0 ? shortName(kam) : ''}
-                  </td>
-                  <td className="px-3 py-2" style={{ color: 'var(--ink)' }}>
-                    {adviser === 'No Adviser Data' ? (
-                      <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No Adviser Data</span>
-                    ) : adviser}
-                  </td>
-                  <td className="px-3 py-2">
-                    {stats.tier ? <TierBadge tier={stats.tier} /> : <span style={{ color: 'var(--muted)' }}>—</span>}
-                  </td>
-                  <td className="px-3 py-2 font-mono">{stats.leads}</td>
-                  <td className="px-3 py-2 font-mono">{stats.quality}</td>
-                  <td className="px-3 py-2 font-mono font-semibold" style={{ color: qualityColor(pct) }}>
-                    {pct != null ? `${pct}%` : '—'}
-                  </td>
-                </tr>
-              )
-            })
-          )}
+          {allRows.map(({ kam, adviser, stats, firstInKam }, i) => {
+            const pct = stats.leads > 0 ? Math.round((stats.quality / stats.leads) * 100) : null
+            const isNoData = adviser === 'No Adviser Data'
+            return (
+              <tr
+                key={`${kam}|${adviser}|${i}`}
+                style={{
+                  borderBottom: '1px solid var(--rule)',
+                  background: i % 2 === 0 ? 'white' : '#f5f7fa',
+                }}
+              >
+                <td className="px-3 py-2 font-medium" style={{ color: 'var(--ink)' }}>
+                  {firstInKam ? shortName(kam) : ''}
+                </td>
+                <td className="px-3 py-2" style={{ color: 'var(--ink)' }}>
+                  {isNoData ? (
+                    <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>No Adviser Data</span>
+                  ) : adviser}
+                </td>
+                <td className="px-3 py-2">
+                  {stats.tier ? <TierBadge tier={stats.tier} /> : <span style={{ color: 'var(--muted)' }}>—</span>}
+                </td>
+                <td className="px-3 py-2 font-mono">{stats.leads}</td>
+                <td className="px-3 py-2 font-mono">{stats.quality}</td>
+                <td className="px-3 py-2 font-mono font-semibold" style={{ color: qualityColor(pct) }}>
+                  {pct != null ? `${pct}%` : '—'}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -224,7 +244,7 @@ export default function AdviserCoverage() {
   // No Adviser Data is always shown in the table but excluded from KPIs.
   const visibleDeals = useMemo(() => allDeals, [allDeals])
 
-  // Deals within the selected date range, excluding No Adviser Data rows (used for KPIs)
+  // Deals excluding No Adviser Data rows (used for quality KPIs)
   const kpiDeals = useMemo(
     () => visibleDeals.filter((d) => d.programme_bucket !== 'No Adviser Data'),
     [visibleDeals]
@@ -232,7 +252,7 @@ export default function AdviserCoverage() {
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
-    const total   = kpiDeals.length
+    const total   = allDeals.length  // matches total rows shown in the grouped table
     const quality = kpiDeals.filter((d) => d.is_quality_lead).length
     const rate    = total > 0 ? Math.round((quality / total) * 100) : 0
 
@@ -247,7 +267,7 @@ export default function AdviserCoverage() {
     const topAdviser = Object.entries(adviserCounts).sort((a, b) => b[1] - a[1])[0]
 
     return { total, quality, rate, topAdviser }
-  }, [kpiDeals])
+  }, [allDeals, kpiDeals])
 
   // ── Chart data ─────────────────────────────────────────────────────────────
   const chartData = useMemo(() => {
@@ -283,7 +303,7 @@ export default function AdviserCoverage() {
 
     for (const d of allDeals) {
 
-      const kam = d.attributed_kam || 'Unknown KAM'
+      const kam = d.attributed_kam || 'No KAM Assigned'
       const adviser = d.attributed_adviser || 'No Adviser Data'
 
       if (!kamMap.has(kam)) kamMap.set(kam, new Map())
@@ -302,8 +322,8 @@ export default function AdviserCoverage() {
     const sorted = new Map(
       [...kamMap.entries()]
         .sort(([a], [b]) => {
-          if (a === 'Unknown KAM') return 1
-          if (b === 'Unknown KAM') return -1
+          if (a === 'No KAM Assigned') return 1
+          if (b === 'No KAM Assigned') return -1
           return a.localeCompare(b)
         })
         .map(([kam, advMap]) => {
