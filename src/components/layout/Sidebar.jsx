@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
 const navItems = [
-  { to: '/timetracker', label: 'Time Tracker',    icon: '⏱', group: null },
-  { to: '/team',        label: 'Team Analytics',  icon: '📈', group: 'TEAM' },
-  { to: '/pipeline',    label: 'Board View',      icon: '📋', group: 'REPORTING' },
-  { to: '/proprietary', label: 'Proprietary',         icon: '🎯', group: 'REPORTING' },
-  { to: '/channels',    label: 'Channels',            icon: '📊', group: 'REPORTING' },
-  { to: '/advisers',    label: 'Adviser Coverage',    icon: '🤝', group: 'REPORTING' },
-  { to: '/funnel',      label: 'Funnel Analysis',     icon: '🔽', group: 'REPORTING' },
-  { to: '/analysis',   label: 'Dynamic Analysis',    icon: '⬡', group: 'REPORTING' },
+  { to: '/timetracker', label: 'Time Tracker',     icon: '⏱', group: 'STAFFING' },
+  { to: '/team',        label: 'Staffing Report',  icon: '📈', group: 'STAFFING' },
+  { to: '/pipeline',    label: 'Board View',        icon: '📋', group: 'REPORTING' },
+  { to: '/channels',    label: 'Channels',          icon: '📊', group: 'REPORTING' },
+  { to: '/advisers',    label: 'Adviser Coverage',  icon: '🤝', group: 'REPORTING' },
+  { to: '/funnel',      label: 'Funnel Analysis',   icon: '🔽', group: 'REPORTING' },
+  { to: '/analysis',   label: 'Dynamic Analysis',  icon: '⬡', group: 'REPORTING' },
+  { to: '/proprietary', label: 'Proprietary',       icon: '🎯', group: 'REPORTING', disabled: true },
 ]
 
 export default function Sidebar() {
@@ -76,15 +76,25 @@ export default function Sidebar() {
                   )}
                 </div>
               )}
-              <NavLink
-                to={item.to}
-                className={linkClass}
-                style={activeLinkStyle}
-                onClick={() => window.innerWidth < 768 && setOpen(false)}
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </NavLink>
+              {item.disabled ? (
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded text-sm cursor-not-allowed"
+                  style={{ color: 'var(--muted)', opacity: 0.5 }}
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                </div>
+              ) : (
+                <NavLink
+                  to={item.to}
+                  className={linkClass}
+                  style={activeLinkStyle}
+                  onClick={() => window.innerWidth < 768 && setOpen(false)}
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                </NavLink>
+              )}
             </div>
           ))}
         </nav>
