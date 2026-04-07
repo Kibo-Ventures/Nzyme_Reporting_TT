@@ -190,8 +190,13 @@ function SectionHeader({ label, count, collapsible, open, onToggle, tooltip }) {
   )
 }
 
+const WEEK_OFFSET_MIN = -8  // how far back users can go (8 weeks)
+const WEEK_OFFSET_MAX = 1   // how far forward (1 week, for planning ahead)
+
 export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) {
-  const weekStart = getMondayISO()
+  const [weekOffset, setWeekOffset] = useState(0)
+  const weekStart = getMondayISO(weekOffset)
+
   const { isLoading, error: dataError, dealflow, longtail, portfolio, origChannels, teamMembers } = useTrackerData()
   const { data: internalCategories = [], isLoading: internalLoading } = useInternalCategories()
   const userEntriesQ = useUserEntries(selectedUser, weekStart)
@@ -211,6 +216,15 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
       prevUser.current = selectedUser
     }
   }, [selectedUser])
+
+  // Reset entries when week changes
+  const prevWeek = useRef(weekStart)
+  useEffect(() => {
+    if (prevWeek.current !== weekStart) {
+      setEntries({})
+      prevWeek.current = weekStart
+    }
+  }, [weekStart])
 
   // Populate entries from existing DB data (ignores unknown category_keys)
   useEffect(() => {
@@ -314,12 +328,86 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
 
       {/* Page header */}
       <div style={{ marginBottom: '1.75rem' }}>
-        <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '0.25rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '0.5rem' }}>
           Weekly Time Log
         </h1>
-        <p style={{ color: 'var(--muted)', fontSize: '0.875rem' }}>
-          Week of {weekLabel}
-        </p>
+        {/* Week navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => setWeekOffset(o => o - 1)}
+            disabled={weekOffset <= WEEK_OFFSET_MIN}
+            title="Previous week"
+            style={{
+              background: 'none',
+              border: '1px solid var(--rule)',
+              borderRadius: 6,
+              padding: '2px 8px',
+              cursor: weekOffset <= WEEK_OFFSET_MIN ? 'not-allowed' : 'pointer',
+              color: weekOffset <= WEEK_OFFSET_MIN ? 'var(--rule)' : 'var(--muted)',
+              fontSize: '0.875rem',
+              lineHeight: 1.5,
+            }}
+          >
+            ←
+          </button>
+          <p style={{ color: 'var(--muted)', fontSize: '0.875rem', margin: 0 }}>
+            Week of {weekLabel}
+            {weekOffset === 0 && (
+              <span style={{ marginLeft: 8, fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600 }}>
+                current
+              </span>
+            )}
+            {weekOffset === -1 && (
+              <span style={{ marginLeft: 8, fontSize: '0.75rem', color: 'var(--muted)' }}>
+                last week
+              </span>
+            )}
+            {weekOffset === 1 && (
+              <span style={{ marginLeft: 8, fontSize: '0.75rem', color: 'var(--muted)' }}>
+                next week
+              </span>
+            )}
+            {weekOffset < -1 && (
+              <span style={{ marginLeft: 8, fontSize: '0.75rem', color: 'var(--muted)' }}>
+                {Math.abs(weekOffset)} weeks ago
+              </span>
+            )}
+          </p>
+          <button
+            onClick={() => setWeekOffset(o => o + 1)}
+            disabled={weekOffset >= WEEK_OFFSET_MAX}
+            title="Next week"
+            style={{
+              background: 'none',
+              border: '1px solid var(--rule)',
+              borderRadius: 6,
+              padding: '2px 8px',
+              cursor: weekOffset >= WEEK_OFFSET_MAX ? 'not-allowed' : 'pointer',
+              color: weekOffset >= WEEK_OFFSET_MAX ? 'var(--rule)' : 'var(--muted)',
+              fontSize: '0.875rem',
+              lineHeight: 1.5,
+            }}
+          >
+            →
+          </button>
+          {weekOffset !== 0 && (
+            <button
+              onClick={() => setWeekOffset(0)}
+              title="Jump to current week"
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '2px 6px',
+                cursor: 'pointer',
+                color: 'var(--muted)',
+                fontSize: '0.75rem',
+                textDecoration: 'underline',
+              }}
+            >
+              back to current
+            </button>
+          )}
+        </div>
       </div>
 
       {/* User selector */}

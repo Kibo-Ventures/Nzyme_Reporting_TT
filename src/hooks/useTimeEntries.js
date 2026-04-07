@@ -7,11 +7,11 @@ const ACTIVE_STAGES = [
   'DD phase',
 ]
 
-export function getMondayISO() {
+export function getMondayISO(offsetWeeks = 0) {
   const d = new Date()
   const day = d.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
   const diff = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + diff)
+  d.setDate(d.getDate() + diff + offsetWeeks * 7)
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
