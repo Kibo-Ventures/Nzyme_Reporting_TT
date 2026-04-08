@@ -60,6 +60,22 @@ export function useChannelCostActuals() {
   })
 }
 
+// All defined origination channels (reference table), ordered by sort_order.
+export function useOrigChannels() {
+  return useQuery({
+    queryKey: ['orig-channels-ref'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ReportingNz_orig_channels')
+        .select('name, sort_order')
+        .order('sort_order', { ascending: true })
+      if (error) throw error
+      return (data ?? []).map(r => r.name)
+    },
+    staleTime: 10 * 60 * 1000,
+  })
+}
+
 // Time entries logged directly to origination channels (category_type = 'orig').
 export function useChannelOrigEntries() {
   return useQuery({

@@ -40,12 +40,11 @@ export function useChannelOptions() {
     queryKey: ['channelOptions'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('ReportingNz_deals')
-        .select('origination_channel')
-        .not('origination_channel', 'is', null)
+        .from('ReportingNz_orig_channels')
+        .select('name, sort_order')
+        .order('sort_order', { ascending: true })
       if (error) throw error
-      const unique = [...new Set(data.map(r => r.origination_channel).filter(Boolean))]
-      return unique.sort((a, b) => a.localeCompare(b))
+      return (data ?? []).map(r => r.name)
     },
   })
 }

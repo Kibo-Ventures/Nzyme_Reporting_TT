@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   LabelList, ResponsiveContainer, Cell,
 } from 'recharts'
-import { useChannelDeals, useChannelCosts, useChannelCostActuals, useChannelOrigEntries } from '../hooks/useChannelPerformance'
+import { useChannelDeals, useChannelCosts, useChannelCostActuals, useChannelOrigEntries, useOrigChannels } from '../hooks/useChannelPerformance'
 import KpiCard from '../components/ui/KpiCard'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import PageBanner from '../components/ui/PageBanner'
@@ -272,14 +272,16 @@ export default function ChannelPerformance() {
   const costsQ    = useChannelCosts()
   const actualsQ  = useChannelCostActuals()
   const origQ     = useChannelOrigEntries()
+  const refChQ    = useOrigChannels()
 
   const isLoading = dealsQ.isLoading
   const error     = dealsQ.error
 
-  const deals   = dealsQ.data   ?? []
-  const costs   = costsQ.data   ?? []
-  const actuals = actualsQ.data ?? []
-  const origEntries = origQ.data ?? []
+  const deals      = dealsQ.data  ?? []
+  const costs      = costsQ.data  ?? []
+  const actuals    = actualsQ.data ?? []
+  const origEntries = origQ.data  ?? []
+  const refChannels = refChQ.data ?? []
 
   // ── Build per-channel rows ─────────────────────────────────────────────────
   const tableRows = useMemo(() => {
@@ -298,8 +300,13 @@ export default function ChannelPerformance() {
       if (e.week_start) origMonthsMap[ch].add(e.week_start.slice(0, 7)) // YYYY-MM
     })
 
-    // Aggregate deals per channel (null channel → 'Unattributed')
+    // Pre-seed accumulator with all defined channels so they appear even with 0 deals
     const acc = {}
+    refChannels.forEach(ch => {
+      acc[ch] = { channel: ch, leads: 0, quality: 0, scoreSum: 0, scoreCount: 0, nboCount: 0 }
+    })
+
+    // Aggregate deals per channel (null channel → 'Unattributed')
     deals.forEach(d => {
       const ch = d.origination_channel || 'Unattributed'
       if (!acc[ch]) acc[ch] = { channel: ch, leads: 0, quality: 0, scoreSum: 0, scoreCount: 0, nboCount: 0 }
@@ -341,7 +348,7 @@ export default function ChannelPerformance() {
         potential:          cost.potential  ?? null,
       }
     })
-  }, [deals, costs, actuals, origEntries])
+  }, [deals, costs, actuals, origEntries, refChannels])
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {

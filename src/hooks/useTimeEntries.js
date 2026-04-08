@@ -56,16 +56,11 @@ export function useTrackerData() {
     queryKey: ['tracker-channels'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('ReportingNz_deals')
-        .select('origination_channel')
-        .not('origination_channel', 'is', null)
+        .from('ReportingNz_orig_channels')
+        .select('name, sort_order')
+        .order('sort_order', { ascending: true })
       if (error) throw error
-      const seen = new Set()
-      return data
-        .map(r => r.origination_channel.trim())
-        .filter(name => name && !seen.has(name) && seen.add(name))
-        .sort()
-        .map(name => ({ name }))
+      return (data ?? []).map(r => ({ name: r.name }))
     },
     staleTime: 10 * 60 * 1000,
   })
