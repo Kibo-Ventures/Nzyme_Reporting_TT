@@ -7,6 +7,12 @@ const ACTIVE_STAGES = [
   'DD phase',
 ]
 
+export function addDays(isoDate, n) {
+  const d = new Date(isoDate + 'T12:00:00')
+  d.setDate(d.getDate() + n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function getMondayISO(offsetWeeks = 0) {
   const d = new Date()
   const day = d.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
@@ -90,6 +96,51 @@ export function useInternalCategories() {
       return data ?? []
     },
     staleTime: 60 * 60 * 1000,
+  })
+}
+
+export function useUserEntriesMerged(userName, weekStart) {
+  const weekStartNext = addDays(weekStart, 7)
+  return useQuery({
+    queryKey: ['user-entries-merged', userName, weekStart],
+    queryFn: async () => {
+      const [resA, resB] = await Promise.all([
+        supabase
+          .from('ReportingNz_time_entries')
+          .select('category_key, category_type, pct_actual')
+          .eq('user_name', userName)
+          .eq('week_start', weekStart),
+        supabase
+          .from('ReportingNz_time_entries')
+          .select('category_key, category_type, pct_expected')
+          .eq('user_name', userName)
+          .eq('week_start', weekStartNext),
+      ])
+      if (resA.error) throw resA.error
+      if (resB.error) throw resB.error
+
+      const merged = {}
+      for (const row of (resA.data ?? [])) {
+        merged[row.category_key] = {
+          category_type: row.category_type,
+          pct_actual: row.pct_actual ?? 0,
+          pct_expected: 0,
+        }
+      }
+      for (const row of (resB.data ?? [])) {
+        if (merged[row.category_key]) {
+          merged[row.category_key].pct_expected = row.pct_expected ?? 0
+        } else {
+          merged[row.category_key] = {
+            category_type: row.category_type,
+            pct_actual: 0,
+            pct_expected: row.pct_expected ?? 0,
+          }
+        }
+      }
+      return merged
+    },
+    enabled: !!userName && !!weekStart,
   })
 }
 

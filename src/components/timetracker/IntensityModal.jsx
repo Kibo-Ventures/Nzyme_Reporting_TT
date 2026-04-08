@@ -7,7 +7,7 @@ const INTENSITY_OPTIONS = [
   { value: 'intense', label: 'Intense', hint: '~70 hrs' },
 ]
 
-export default function IntensityModal({ formData, weekStart, selectedUser, onSuccess, onClose }) {
+export default function IntensityModal({ formData, weekStart, weekStartNext, selectedUser, onSuccess, onClose }) {
   const [intensity, setIntensity] = useState('normal')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -16,11 +16,17 @@ export default function IntensityModal({ formData, weekStart, selectedUser, onSu
     setSubmitting(true)
     setError(null)
     try {
-      const rows = formData.map(row => ({ ...row, intensity }))
-      const { error: sbErr } = await supabase
-        .from('ReportingNz_time_entries')
-        .upsert(rows, { onConflict: 'user_name,week_start,category_key' })
-      if (sbErr) throw sbErr
+      const { actualRows, expectedRows } = formData
+      const upserts = []
+      if (actualRows.length > 0)
+        upserts.push(supabase.from('ReportingNz_time_entries')
+          .upsert(actualRows.map(r => ({ ...r, intensity })), { onConflict: 'user_name,week_start,category_key' }))
+      if (expectedRows.length > 0)
+        upserts.push(supabase.from('ReportingNz_time_entries')
+          .upsert(expectedRows.map(r => ({ ...r, intensity })), { onConflict: 'user_name,week_start,category_key' }))
+      const results = await Promise.all(upserts)
+      const failed = results.find(r => r.error)
+      if (failed) throw failed.error
       onSuccess()
     } catch (e) {
       setError(e.message || 'Failed to submit. Please try again.')
@@ -60,7 +66,7 @@ export default function IntensityModal({ formData, weekStart, selectedUser, onSu
             color: 'var(--ink)',
           }}
         >
-          How intense was last week?
+          How intense was this week?
         </h2>
         <p
           style={{

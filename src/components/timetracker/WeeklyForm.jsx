@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useTrackerData, useUserEntries, useInternalCategories, getMondayISO } from '../../hooks/useTimeEntries'
+import { useTrackerData, useUserEntriesMerged, useInternalCategories, getMondayISO, addDays } from '../../hooks/useTimeEntries'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import IntensityModal from './IntensityModal'
 
@@ -194,12 +194,13 @@ const WEEK_OFFSET_MIN = -8  // how far back users can go (8 weeks)
 const WEEK_OFFSET_MAX = 1   // how far forward (1 week, for planning ahead)
 
 export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) {
-  const [weekOffset, setWeekOffset] = useState(0)
-  const weekStart = getMondayISO(weekOffset)
+  const [weekOffset, setWeekOffset] = useState(() => new Date().getDay() === 1 ? -1 : 0)
+  const weekStart     = getMondayISO(weekOffset)
+  const weekStartNext = addDays(weekStart, 7)
 
   const { isLoading, error: dataError, dealflow, longtail, portfolio, origChannels, teamMembers } = useTrackerData()
   const { data: internalCategories = [], isLoading: internalLoading } = useInternalCategories()
-  const userEntriesQ = useUserEntries(selectedUser, weekStart)
+  const userEntriesQ = useUserEntriesMerged(selectedUser, weekStart)
 
   const [entries, setEntries] = useState({})
   const [showLongtail, setShowLongtail] = useState(false)
@@ -226,15 +227,15 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
     }
   }, [weekStart])
 
-  // Populate entries from existing DB data (ignores unknown category_keys)
+  // Populate entries from existing DB data (merged from two week_starts)
   useEffect(() => {
     if (!userEntriesQ.isSuccess || !userEntriesQ.data) return
     const filled = {}
-    for (const row of userEntriesQ.data) {
-      const p = Number(row.pct_expected)
-      const a = Number(row.pct_actual)
+    for (const [key, val] of Object.entries(userEntriesQ.data)) {
+      const p = Number(val.pct_expected) || 0
+      const a = Number(val.pct_actual)   || 0
       if (p > 0 || a > 0) {
-        filled[row.category_key] = {
+        filled[key] = {
           pct: p > 0 ? String(p) : '',
           pct_actual: a > 0 ? String(a) : '',
         }
@@ -260,22 +261,33 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
     if (!selectedUser) return
     setSubmitError(null)
 
-    const rows = []
+    const actualRows   = []  // pct_actual → week_start = weekStart
+    const expectedRows = []  // pct_expected → week_start = weekStartNext
 
     function addRows(items, type) {
       for (const item of items) {
-        const key = typeof item === 'string' ? item : item.name
-        const e = entries[key] || {}
-        const pct = parseFloat(e.pct) || 0
-        const pct_actual = parseFloat(e.pct_actual) || 0
-        if (pct > 0 || pct_actual > 0) {
-          rows.push({
+        const key     = typeof item === 'string' ? item : item.name
+        const e       = entries[key] || {}
+        const pct_exp = parseFloat(e.pct)        || 0
+        const pct_act = parseFloat(e.pct_actual) || 0
+        if (pct_act > 0) {
+          actualRows.push({
             user_name: selectedUser,
             week_start: weekStart,
             category_key: key,
             category_type: type,
-            pct_expected: pct,
-            pct_actual,
+            pct_expected: 0,
+            pct_actual: pct_act,
+          })
+        }
+        if (pct_exp > 0) {
+          expectedRows.push({
+            user_name: selectedUser,
+            week_start: weekStartNext,
+            category_key: key,
+            category_type: type,
+            pct_expected: pct_exp,
+            pct_actual: 0,
           })
         }
       }
@@ -287,16 +299,18 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
     addRows(portfolio, 'portco')
     addRows(internalCategories.map(c => c.name), 'internal')
 
-    if (rows.length === 0) {
+    if (actualRows.length === 0 && expectedRows.length === 0) {
       setSubmitError('Please enter at least one time entry before submitting.')
       return
     }
 
-    setPendingRows(rows)
+    setPendingRows({ actualRows, expectedRows })
     setShowIntensityModal(true)
   }
 
-  // Week label
+  // Week labels
+  const thisWeekShort = new Date(weekStart     + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const nextWeekShort = new Date(weekStartNext + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const weekLabel = new Date(weekStart + 'T12:00:00').toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
@@ -320,6 +334,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
         <IntensityModal
           formData={pendingRows}
           weekStart={weekStart}
+          weekStartNext={weekStartNext}
           selectedUser={selectedUser}
           onSuccess={onSubmitted}
           onClose={() => setShowIntensityModal(false)}
@@ -470,7 +485,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
           }}
         >
           Exp&nbsp;%<br />
-          <span style={{ fontWeight: 400 }}>(Upcoming)</span>
+          <span style={{ fontWeight: 400, textTransform: 'none' }}>w/c {nextWeekShort}</span>
         </div>
         <div
           style={{
@@ -485,7 +500,7 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
           }}
         >
           Actual&nbsp;%<br />
-          <span style={{ fontWeight: 400 }}>(Past)</span>
+          <span style={{ fontWeight: 400, textTransform: 'none' }}>w/c {thisWeekShort}</span>
         </div>
       </div>
 
