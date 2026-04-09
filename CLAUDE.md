@@ -15,7 +15,7 @@ Internal BI dashboard for a PE fund. Two functional areas: a **Time Tracker** fo
 | Charts | Recharts v3 |
 | Data fetching | Supabase JS v2 + TanStack React Query v5 |
 | Routing | React Router v7 |
-| Auth | Vercel Edge Middleware (Basic Auth, separate creds per route) |
+| Auth | Supabase Auth — Google OAuth, domain-restricted, session in localStorage |
 | Hosting | Vercel (auto-deploy from GitHub `main`) |
 | Backend | Supabase (Postgres + Edge Functions, RLS-protected) |
 
@@ -25,10 +25,14 @@ Internal BI dashboard for a PE fund. Two functional areas: a **Time Tracker** fo
 
 ```
 src/
-├── App.jsx                          ← Routes + FilterProvider
-├── main.jsx                         ← QueryClient (5min stale, retry=1)
+├── App.jsx                          ← Routes: /login, /auth/callback, ProtectedRoute wrapper + FilterProvider
+├── main.jsx                         ← QueryClient (5min stale, retry=1) + AuthProvider
 ├── index.css                        ← CSS custom properties + global resets
+├── contexts/
+│   └── AuthContext.jsx              ← AuthProvider, useAuth(), Google sign-in, domain check, sign-out
 ├── pages/
+│   ├── LoginPage.jsx                ← /login — Google sign-in button, domain error messages
+│   ├── AuthCallback.jsx             ← /auth/callback — handles OAuth redirect, shows "Signing you in…"
 │   ├── TimeTracker.jsx              ← /timetracker (default)
 │   ├── TeamAnalytics.jsx            ← /team
 │   ├── BoardPipeline.jsx            ← /pipeline
@@ -40,13 +44,15 @@ src/
 ├── components/
 │   ├── layout/
 │   │   ├── AppShell.jsx             ← Outlet + conditional FilterBar + AiChatPanel
-│   │   ├── Sidebar.jsx              ← Sticky nav (8 routes)
+│   │   ├── Sidebar.jsx              ← Sticky nav (8 routes) + user email + sign-out button
 │   │   └── FilterBar.jsx            ← Date/captain/stage/channel + freshness
 │   ├── chat/
 │   │   └── AiChatPanel.jsx          ← Slide-in AI chat panel (all non-timetracker pages)
 │   ├── timetracker/
-│   │   ├── WeeklyForm.jsx           ← Main time-entry form
+│   │   ├── WeeklyForm.jsx           ← Main time-entry form (team member auto-resolved from auth email)
 │   │   └── SuccessScreen.jsx        ← Post-submit confirmation
+│   ├── ProtectedRoute.jsx           ← Layout route guard — redirects to /login if not authenticated
+│   ├── TeamAccessGate.jsx           ← Staffing Report guard — checks team_access Supabase table
 │   └── ui/
 │       ├── Badge.jsx                ← StageBadge + TierBadge
 │       ├── KpiCard.jsx              ← Metric card (title/value/subtitle)
@@ -75,9 +81,67 @@ Root files:
 
 | File | Purpose |
 |---|---|
-| `middleware.js` | Vercel Edge Runtime Basic Auth (two credential pairs) |
-| `vercel.json` | SPA rewrites |
+| `vercel.json` | SPA rewrites — all routes → `index.html` |
 | `vite.config.js` | tailwindcss() + react() plugins |
+
+> `middleware.js` was deleted when Basic Auth was replaced by Supabase Auth.
+
+---
+
+## Auth
+
+### Overview
+
+Authentication is handled entirely in the React SPA via **Supabase Auth with Google OAuth**. There is no server-side middleware.
+
+**Flow:**
+1. Unauthenticated user hits any route → `ProtectedRoute` redirects to `/login`
+2. User clicks "Sign in with Google" → `supabase.auth.signInWithOAuth({ provider: 'google' })`
+3. Google redirects to `/auth/callback` → Supabase exchanges the code for a session
+4. `AuthContext` checks the email domain — must end with `@kiboventures.com` or `@nzalpha.com`
+5. Invalid domain → session immediately signed out, error shown on `/login`
+6. Valid domain → user redirected to their intended destination (default `/timetracker`)
+7. Session persists in `localStorage` across page refreshes until sign-out
+
+### Key Files
+
+| File | Responsibility |
+|---|---|
+| `src/contexts/AuthContext.jsx` | Auth state (`user`, `authError`), `signInWithGoogle()`, `signOut()`, domain validation |
+| `src/pages/LoginPage.jsx` | Login UI — Google button, domain error, signin error |
+| `src/pages/AuthCallback.jsx` | OAuth landing page — shows "Signing you in…", redirects once session resolves |
+| `src/components/ProtectedRoute.jsx` | React Router layout route — renders `<Outlet />` if authenticated, else redirects to `/login` |
+| `src/components/TeamAccessGate.jsx` | Wraps `/team` — checks `team_access` table for the user's email, shows access-denied if not found |
+
+### Allowed Domains
+
+Defined as a constant in `AuthContext.jsx`:
+
+```js
+const ALLOWED_DOMAINS = ['kiboventures.com', 'nzalpha.com']
+```
+
+To add `@nzyme.com` in future, append `'nzyme.com'` to this array.
+
+### Staffing Report Access (`/team`)
+
+Access to `/team` is restricted to a specific allowlist stored in the `team_access` Supabase table. Being able to log in (valid domain) does **not** automatically grant access to this page.
+
+**To grant access**: insert a row into `team_access` via the Supabase dashboard:
+```sql
+insert into team_access (email) values ('name@kiboventures.com');
+```
+
+Current access: all 6 MDs (Fernando, Ignacio, Jose Manuel, Juan, Pablo, Vicente) + jacob@kiboventures.com.
+
+### Supabase Configuration Required
+
+| Setting | Value |
+|---|---|
+| Auth Provider | Google OAuth enabled (Supabase Dashboard → Auth → Providers) |
+| Google Redirect URI (in Google Cloud Console) | `https://yphbrpbwpakjduhmoimw.supabase.co/auth/v1/callback` |
+| Supabase Site URL | `https://nzyme-reporting.vercel.app` |
+| Supabase Redirect URLs | `https://nzyme-reporting.vercel.app/auth/callback`, `http://localhost:5173/auth/callback` |
 
 ---
 
@@ -113,9 +177,21 @@ Root files:
 | `ReportingNz_advisers` | Adviser coverage DB (tier, firm_type, KAM, contacts, NDA status) |
 | `ReportingNz_deal_stage_history` | Stage transitions with `changed_at` / `exited_at` / `days_in_stage` (~1,700 rows) |
 | `ReportingNz_time_entries` | Weekly logs (`user_name`, `week_start`, `category_key`, `category_type`, `pct_expected`, `hrs_actual`); upserted on composite key |
-| `ReportingNz_team_members` | Active team (`name`, `seniority`, `hourly_rate`, `seniority_multiplier`) |
+| `ReportingNz_team_members` | Active team (`name`, `seniority`, `hourly_rate`, `seniority_multiplier`, `email`); `email` links each member to their Supabase Auth account |
 | `ReportingNz_orig_channels` | Origination channel reference (`name`, `sort_order`) |
 | `ReportingNz_channel_costs` | Manual cost inputs (`one_off_cost`, `difficulty`, `potential`) |
+| `team_access` | Staffing Report allowlist — one row per email address permitted to view `/team` |
+
+#### `team_access` table
+
+```sql
+create table team_access (
+  id         uuid primary key default gen_random_uuid(),
+  email      text not null unique,
+  created_at timestamptz not null default now()
+);
+-- RLS: authenticated users can only read their own row
+```
 
 ### Views
 
@@ -201,7 +277,9 @@ All raw `stage` values from Affinity CRM:
 
 ### Time Tracker (`/timetracker`)
 
-- User + week selector (always current Monday, local timezone via `getMondayISO()`)
+- Team member is **auto-resolved** from the logged-in user's email — matched against the `email` column in `ReportingNz_team_members`. No manual selection dropdown.
+- If the logged-in email has no matching row in `ReportingNz_team_members`, an error message is shown prompting an admin to add their email to the table.
+- Week selector (always current Monday, local timezone via `getMondayISO()`)
 - **6 category groups**: Dealflow (scrollable if >8 deals), Longtail, Origination, Portfolio, Internal, Time Off
 - Two input columns per row: `pct_expected` (next week %) + `hrs_actual` (last week hrs)
 - Live % total with over-100% warning; running hrs total with "X hrs/day" hint
@@ -212,6 +290,7 @@ All raw `stage` values from Affinity CRM:
 
 ### Team Analytics (`/team`)
 
+- **Access restricted** — only users listed in the `team_access` table can view this page (`TeamAccessGate` component)
 - **Timeframe toggle**: This Week / This Month (independent of global LTM filter)
 - **Chart 1** — Stacked bar: % allocation by category per team member (dealflow / internal / portco / orig)
 - **Chart 2** — Horizontal bar: FTE per active deal (`pct_expected/100` summed across team), stage-colored, filterable by stage
@@ -391,29 +470,14 @@ Tier 1 → green, Tier 2 → blue, Tier 3 → amber, No Tier → muted grey
 
 ---
 
-## Auth (`middleware.js`)
-
-Vercel Edge Runtime. Two credential pairs enforced separately:
-
-| Env Var pair | Protects |
-|---|---|
-| `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` | Time Tracker (`/timetracker`) |
-| `REPORT_AUTH_USER` / `REPORT_AUTH_PASSWORD` | All reporting pages |
-
-Since this is a SPA, the middleware protects the whole app via Vercel rewrites. The `pathname` check selects which credential pair to validate against.
-
----
-
 ## Environment Variables
 
 | Variable | Purpose |
 |---|---|
 | `VITE_SUPABASE_URL` | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon key (public-safe) |
-| `BASIC_AUTH_USER` | Time tracker username |
-| `BASIC_AUTH_PASSWORD` | Time tracker password |
-| `REPORT_AUTH_USER` | Reporting username |
-| `REPORT_AUTH_PASSWORD` | Reporting password |
+
+> The old Basic Auth variables (`BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD`, `REPORT_AUTH_USER`, `REPORT_AUTH_PASSWORD`, `VITE_TEAM_PASSWORD`) are no longer used and can be removed from Vercel environment settings.
 
 ---
 
