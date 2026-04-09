@@ -481,12 +481,13 @@ export default function FunnelAnalysis() {
       <div>
         <h1
           className="text-2xl mb-1"
-          style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, color: 'var(--ink)' }}
+          style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}
         >
           Funnel Analysis
+          <InfoTooltip text="Stage bars show deals filtered by their date_added in Affinity — i.e. when they were first sourced. A deal that entered DD Phase this year but was added to Affinity two years ago will not appear in a YTD filter. Use 'All' for the full historical funnel. Median days per stage always reflects all-time stage history regardless of the date filter." />
         </h1>
         <p className="text-sm" style={{ color: 'var(--muted)' }}>
-          All-time deal lifecycle — stage progression and conversion rates
+          Deal lifecycle — stage progression and conversion rates
         </p>
       </div>
 
@@ -500,7 +501,7 @@ export default function FunnelAnalysis() {
         <KpiCard
           title="Deals Entered Funnel"
           value={kpis.entry ?? '—'}
-          subtitle="all-time, any stage"
+          subtitle={isDateFiltered ? `count of deals sourced in period` : 'count of all deals, any stage'}
         />
         <KpiCard
           title="Portfolio (Invested)"
