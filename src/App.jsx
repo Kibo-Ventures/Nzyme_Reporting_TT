@@ -1,9 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { FilterProvider } from './hooks/useFilters'
 import AppShell from './components/layout/AppShell'
+import ProtectedRoute from './components/ProtectedRoute'
+import TeamAccessGate from './components/TeamAccessGate'
+import LoginPage from './pages/LoginPage'
+import AuthCallback from './pages/AuthCallback'
 import TimeTracker from './pages/TimeTracker'
 import TeamAnalytics from './pages/TeamAnalytics'
-import TeamPasswordGate from './components/TeamPasswordGate'
 import BoardPipeline from './pages/BoardPipeline'
 import ProprietaryDealflow from './pages/ProprietaryDealflow'
 import ChannelPerformance from './pages/ChannelPerformance'
@@ -13,12 +16,15 @@ import DynamicAnalysis from './pages/DynamicAnalysis'
 
 export default function App() {
   return (
-    <FilterProvider>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route index element={<Navigate to="/timetracker" replace />} />
+    <Routes>
+      <Route path="/login"         element={<LoginPage />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+
+      <Route element={<ProtectedRoute />}>
+        <Route element={<FilterProvider><AppShell /></FilterProvider>}>
+          <Route index                element={<Navigate to="/timetracker" replace />} />
           <Route path="/timetracker"  element={<TimeTracker />} />
-          <Route path="/team"         element={<TeamPasswordGate><TeamAnalytics /></TeamPasswordGate>} />
+          <Route path="/team"         element={<TeamAccessGate><TeamAnalytics /></TeamAccessGate>} />
           <Route path="/pipeline"     element={<BoardPipeline />} />
           <Route path="/proprietary"  element={<ProprietaryDealflow />} />
           <Route path="/channels"     element={<ChannelPerformance />} />
@@ -27,7 +33,7 @@ export default function App() {
           <Route path="/analysis"     element={<DynamicAnalysis />} />
           <Route path="*"             element={<Navigate to="/timetracker" replace />} />
         </Route>
-      </Routes>
-    </FilterProvider>
+      </Route>
+    </Routes>
   )
 }

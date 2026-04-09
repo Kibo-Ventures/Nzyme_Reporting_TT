@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 
 const navItems = [
   { to: '/timetracker', label: 'Time Tracker',     icon: '⏱', group: 'STAFFING' },
@@ -14,6 +15,7 @@ const navItems = [
 
 export default function Sidebar() {
   const [open, setOpen] = useState(true)
+  const { user, signOut } = useAuth()
 
   const linkClass = ({ isActive }) =>
     `flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
@@ -98,6 +100,32 @@ export default function Sidebar() {
             </div>
           ))}
         </nav>
+
+        {/* User + sign-out */}
+        <div className="px-3 py-3 border-t" style={{ borderColor: 'var(--rule)' }}>
+          {user && (
+            <p style={{ fontSize: '11px', color: 'var(--muted)', margin: '0 0 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user.email}
+            </p>
+          )}
+          <button
+            onClick={signOut}
+            style={{
+              width: '100%',
+              padding: '6px 10px',
+              background: 'transparent',
+              border: '1px solid var(--rule)',
+              borderRadius: '4px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              fontFamily: 'DM Sans, sans-serif',
+              color: 'var(--muted)',
+              textAlign: 'left',
+            }}
+          >
+            Sign out
+          </button>
+        </div>
       </aside>
 
       {/* Mobile backdrop */}
