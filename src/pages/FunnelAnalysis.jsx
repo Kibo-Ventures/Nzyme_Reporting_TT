@@ -246,9 +246,15 @@ function TimeInvestedTable({ stages, timeByStage }) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function FunnelAnalysis() {
-  const filters = useFilters()
+  // useFilters returns { filters, setFilter, resetFilters } — unwrap correctly
+  const { filters, setFilter } = useFilters()
   const { dateRange } = filters
   const isDateFiltered = dateRange !== 'all'
+
+  // Funnel defaults to all-time on mount so the pre-aggregated view is the baseline
+  useEffect(() => {
+    setFilter({ dateRange: 'all' })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: stages = [], isLoading, error } = useFunnelStages()
   const { data: portfolioCount = 0 } = useCurrentPortfolioCount()
@@ -258,6 +264,7 @@ export default function FunnelAnalysis() {
   const [ldFilter, setLdFilter] = useState('all') // 'all' | 'lost' | 'discarded'
   const { data: histogramRaw = [], isLoading: histLoading } = useStageHistogram(selectedStage)
   const { data: adviserRaw = [] } = useAdviserStageBreakdown()
+  // Pass the actual filter values object (not the whole context wrapper)
   const { data: allDeals = [] } = useFunnelDeals(filters)
   const { data: timeInvestmentRaw = [] } = useStageTimeInvestment()
   const { data: ldDeals = [] } = useLostDiscardedDeals()
