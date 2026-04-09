@@ -11,7 +11,9 @@ import {
   useStageTimeInvestment,
   useLostDiscardedDeals,
   useLostDiscardedHistory,
+  useCurrentPortfolioCount,
 } from '../hooks/useFunnelAnalysis'
+import { useFilters } from '../hooks/useFilters'
 import KpiCard from '../components/ui/KpiCard'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import PageBanner from '../components/ui/PageBanner'
@@ -244,14 +246,19 @@ function TimeInvestedTable({ stages, timeByStage }) {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function FunnelAnalysis() {
+  const filters = useFilters()
+  const { dateRange } = filters
+  const isDateFiltered = dateRange !== 'all'
+
   const { data: stages = [], isLoading, error } = useFunnelStages()
+  const { data: portfolioCount = 0 } = useCurrentPortfolioCount()
   const [selectedStage, setSelectedStage] = useState(null)
   const [filterType, setFilterType] = useState(null)
   const [filterValue, setFilterValue] = useState(null)
   const [ldFilter, setLdFilter] = useState('all') // 'all' | 'lost' | 'discarded'
   const { data: histogramRaw = [], isLoading: histLoading } = useStageHistogram(selectedStage)
   const { data: adviserRaw = [] } = useAdviserStageBreakdown()
-  const { data: allDeals = [] } = useFunnelDeals()
+  const { data: allDeals = [] } = useFunnelDeals(filters)
   const { data: timeInvestmentRaw = [] } = useStageTimeInvestment()
   const { data: ldDeals = [] } = useLostDiscardedDeals()
   const ldDealNames = useMemo(() => ldDeals.map(d => d.name).filter(Boolean), [ldDeals])
@@ -284,8 +291,10 @@ export default function FunnelAnalysis() {
   }, [filterType, allDeals, adviserRaw])
 
   // ── Filtered funnel computation ────────────────────────────────────────────
+  // Triggers when date is filtered OR a captain/channel/adviser filter is active.
+  // When date-filtered, allDeals is already scoped to the date range by the hook.
   const filteredStages = useMemo(() => {
-    if (!filterType || !filterValue) return null
+    if (!filterType && !filterValue && !isDateFiltered) return null
 
     let deals = allDeals
     if (filterType === 'captains')
@@ -308,7 +317,7 @@ export default function FunnelAnalysis() {
         stage_to_stage_pct: prevReached > 0 ? Math.round((reached / prevReached) * 100) : null,
       }
     }).filter(s => s.reached_stage > 0)
-  }, [filterType, filterValue, allDeals, adviserRaw])
+  }, [filterType, filterValue, isDateFiltered, allDeals, adviserRaw])
 
   // Active dataset: filtered when both filterType + filterValue set, else DB view
   const activeStages = filteredStages ?? stages
@@ -475,9 +484,8 @@ export default function FunnelAnalysis() {
       </div>
 
       <PageBanner
-        summary="Shows how deals have moved through the pipeline stages over all time."
-        body="This page always shows all-time data — the date filter is intentionally disabled because funnel conversion rates are only meaningful across the full dataset. Each stage bar shows the cumulative count of deals that reached or passed that stage, not just deals currently sitting in it. Clicking a stage row expands a time-in-stage histogram."
-        caveat="Date range filter is disabled — this page always reflects all-time data."
+        summary="Shows how deals have moved through the pipeline stages over time."
+        body="Each stage bar shows the cumulative count of deals that reached or passed that stage, not just deals currently sitting in it. The date filter scopes deals by their date_added — use 'All' for the full historical picture, or switch to LTM/YTD to see pipeline development over a specific period. Clicking a stage row expands a time-in-stage histogram. Note: median days per stage always reflects all-time data from the full stage history."
       />
 
       {/* ── KPI cards ── */}
@@ -489,8 +497,8 @@ export default function FunnelAnalysis() {
         />
         <KpiCard
           title="Portfolio (Invested)"
-          value={kpis.portfolio ?? '—'}
-          subtitle="reached Portfolio stage"
+          value={portfolioCount}
+          subtitle="currently in Portfolio stage"
         />
         <KpiCard
           title="Entry → Portfolio"

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { applyDateRange } from '../lib/dateRange'
 
 // Aggregated funnel view — 6 rows, one per stage.
 // No date filter: this is an all-time lifecycle view.
@@ -102,17 +103,38 @@ export function useLostDiscardedHistory(dealNames) {
   })
 }
 
-// Raw deals for pivot breakdowns on the funnel page.
-export function useFunnelDeals() {
+// Raw deals for funnel computation — date-filterable.
+export function useFunnelDeals(filters = {}) {
+  const { dateRange, dateFrom, dateTo } = filters
   return useQuery({
-    queryKey: ['funnel-deals'],
+    queryKey: ['funnel-deals', dateRange, dateFrom, dateTo],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('ReportingNz_deals')
-        .select('name, stage, deal_captain, origination_channel')
+        .select('name, stage, deal_captain, origination_channel, date_added')
+      query = applyDateRange(query, filters)
+      const { data, error } = await query
       if (error) throw error
       return data || []
     },
     staleTime: 5 * 60 * 1000,
+  })
+}
+
+// Count of deals currently sitting in Portfolio stage (is_active = true).
+// Used for the Portfolio KPI — excludes companies that passed through but exited.
+export function useCurrentPortfolioCount() {
+  return useQuery({
+    queryKey: ['current-portfolio-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('ReportingNz_deals')
+        .select('*', { count: 'exact', head: true })
+        .eq('stage', 'Portfolio')
+        .eq('is_active', true)
+      if (error) throw error
+      return count ?? 0
+    },
+    staleTime: 10 * 60 * 1000,
   })
 }

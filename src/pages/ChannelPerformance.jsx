@@ -396,8 +396,8 @@ export default function ChannelPerformance() {
       </h1>
 
       <PageBanner
-        summary="Compares origination channels by volume, quality, and cost efficiency."
-        body="Each row is an origination channel. Costs combine two sources: one-off costs entered manually, and time-based costs calculated from hours logged against that channel multiplied by team rates and seniority multipliers. 'Unattributed' covers deals with no channel set. NBO count is based on the Milestones field containing 'NBO Sent'."
+        summary="Compares origination channels by volume, quality, and time invested."
+        body="Channels are as defined in Affinity CRM. Each row shows deal volume, quality metrics, and time invested per channel. 'Unattributed' covers deals with no channel set in Affinity. NBO count is based on the Milestones field containing 'NBO Sent'."
         style={{ marginBottom: 24 }}
       />
 
@@ -478,7 +478,7 @@ export default function ChannelPerformance() {
           <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
             <h3 style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: '1.0625rem', marginBottom: 4 }}>Channel Breakdown</h3>
             <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: 16 }}>
-              Click column headers to sort. Total Hours = time logged directly to the channel; Time Invested in Deals = hours on deals attributed to the channel. Avg Cost / Month = total cost ÷ months with logged activity.
+              Click column headers to sort. Total Hours = time logged directly to the channel via the Time Tracker. Time Invested in Deals = hours logged on deals sourced from that channel.
             </p>
             <ChannelTable rows={tableRows} />
           </div>

@@ -6,7 +6,7 @@ import { AiChatPanel } from '../chat/AiChatPanel'
 export default function AppShell() {
   const { pathname } = useLocation()
   const showFilters = pathname !== '/timetracker' && pathname !== '/team'
-  const disableDateRange = ['/funnel', '/pipeline'].includes(pathname)
+  const disableDateRange = ['/pipeline'].includes(pathname)
   const hideChannel = pathname === '/advisers'
 
   return (
