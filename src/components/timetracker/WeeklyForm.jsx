@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTrackerData, useUserEntriesMerged, useInternalCategories, getMondayISO, addDays } from '../../hooks/useTimeEntries'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import IntensityModal from './IntensityModal'
