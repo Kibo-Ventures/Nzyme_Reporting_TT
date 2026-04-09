@@ -4,11 +4,8 @@ import { useAiChat } from '../../hooks/useAiChat'
 // Suggested prompts shown on the empty state — PE-relevant, concise.
 const SUGGESTED = [
   'How many quality leads did we source in the last 12 months?',
-  'Which deal captain has the most active deals right now?',
-  'What is our conversion rate from Being Explored to DD Phase?',
-  'Show the top 5 deals by total hours invested',
-  'How many proprietary deals sourced YTD vs our 36-deal annual target?',
-  'Which adviser channel has the highest quality lead rate?',
+  'How many companies received an NBO, are their progression speeds faster or slower than average?',
+  'How much % of the teams expected capacity is invested in Internal tasks this week?',
 ]
 
 export function AiChatPanel() {
