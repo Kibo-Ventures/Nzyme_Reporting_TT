@@ -484,7 +484,6 @@ export default function FunnelAnalysis() {
           style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}
         >
           Funnel Analysis
-          <InfoTooltip text="Stage bars show deals filtered by their date_added in Affinity — i.e. when they were first sourced. A deal that entered DD Phase this year but was added to Affinity two years ago will not appear in a YTD filter. Use 'All' for the full historical funnel. Median days per stage always reflects all-time stage history regardless of the date filter." />
         </h1>
         <p className="text-sm" style={{ color: 'var(--muted)' }}>
           Deal lifecycle — stage progression and conversion rates
@@ -524,13 +523,14 @@ export default function FunnelAnalysis() {
       <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
         <div className="mb-4 flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+            <div className="text-sm font-semibold" style={{ color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 5 }}>
               Deals Reaching Each Stage
+              <InfoTooltip text="Based on deals sourced (date added in Affinity) in the selected period. Deals added earlier that advanced later are not included." />
             </div>
             <div className="text-xs" style={{ color: 'var(--muted)' }}>
               {filterType && filterValue
                 ? `Filtered: ${filterValue}`
-                : 'All-time count of deals that reached or passed each stage'}
+                : 'Count of deals that reached or passed each stage'}
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
