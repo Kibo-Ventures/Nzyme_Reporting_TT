@@ -57,3 +57,19 @@ textarea:focus {
 .toggle-btn:not([data-active="true"]):hover {
   background: rgba(0, 0, 0, 0.04) !important;
 }
+
+/* ── AI chat — loading dots ────────────────────────────────────────────────── */
+
+@keyframes aiDot {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0);    }
+  30%           { opacity: 1;    transform: translateY(-3px); }
+}
+
+.ai-dot {
+  display:          inline-block;
+  width:            6px;
+  height:           6px;
+  border-radius:    50%;
+  background:       var(--muted);
+  animation:        aiDot 1.2s ease-in-out infinite;
+}
