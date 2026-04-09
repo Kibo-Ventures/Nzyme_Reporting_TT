@@ -12,6 +12,7 @@ import {
   useLostDiscardedDeals,
   useLostDiscardedHistory,
   useCurrentPortfolioCount,
+  usePipelineThroughput,
 } from '../hooks/useFunnelAnalysis'
 import { useFilters } from '../hooks/useFilters'
 import KpiCard from '../components/ui/KpiCard'
@@ -267,6 +268,7 @@ export default function FunnelAnalysis() {
   // Pass the actual filter values object (not the whole context wrapper)
   const { data: allDeals = [] } = useFunnelDeals(filters)
   const { data: timeInvestmentRaw = [] } = useStageTimeInvestment()
+  const { data: throughputRaw = [] } = usePipelineThroughput(filters)
   const { data: ldDeals = [] } = useLostDiscardedDeals()
   const ldDealNames = useMemo(() => ldDeals.map(d => d.name).filter(Boolean), [ldDeals])
   const { data: ldHistory = [] } = useLostDiscardedHistory(ldDealNames)
@@ -374,6 +376,20 @@ export default function FunnelAnalysis() {
     Object.values(map).forEach(s => s.deals.sort((a, b) => b.hrs - a.hrs))
     return map
   }, [timeInvestmentRaw])
+
+  // ── Pipeline throughput: distinct deals per stage in period ──────────────
+  const throughputBarData = useMemo(() => {
+    return STAGE_ORDER.map((stageVal, i) => {
+      const deals = new Set(
+        throughputRaw.filter(r => r.stage_value === stageVal).map(r => r.deal_name)
+      )
+      return {
+        name:  STAGE_SHORT[stageVal] ?? stageVal,
+        value: deals.size,
+        fill:  STAGE_COLOR_MAP[stageVal] ?? STAGE_COLORS[i] ?? '#9ca3af',
+      }
+    }).filter(d => d.value > 0)
+  }, [throughputRaw])
 
   // ── Lost & Discarded KPIs ─────────────────────────────────────────────────
   const ldKpis = useMemo(() => {
@@ -740,6 +756,65 @@ export default function FunnelAnalysis() {
           )}
         </div>
       )}
+
+      {/* ── Pipeline Throughput ── */}
+      <div className="rounded-lg border p-6" style={{ borderColor: 'var(--rule)', background: 'white' }}>
+        <div className="mb-4 flex items-start gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                Stage Activity in Period
+              </span>
+              <InfoTooltip text="Counts distinct deals that actively entered each stage during the selected period, based on when the stage transition occurred — not when the deal was first sourced. A deal sourced before the period but that advanced in-period is counted here." />
+            </div>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>
+              {isDateFiltered
+                ? 'Deals that moved into each stage during the selected period (by transition date)'
+                : 'All-time: deals that ever entered each stage'}
+            </div>
+          </div>
+        </div>
+
+        {throughputBarData.length === 0 ? (
+          <div className="text-sm text-center py-8" style={{ color: 'var(--muted)' }}>
+            No stage activity data for the selected period
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(180, throughputBarData.length * 44)}>
+            <BarChart
+              layout="vertical"
+              data={throughputBarData}
+              margin={{ top: 4, right: 52, bottom: 4, left: 130 }}
+            >
+              <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--rule)" />
+              <YAxis
+                dataKey="name"
+                type="category"
+                width={120}
+                tick={{ fontSize: 12, fill: 'var(--ink)' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <XAxis
+                type="number"
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: 'var(--muted)' }}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="value" name="Deals" radius={[0, 3, 3, 0]} isAnimationActive={false}>
+                {throughputBarData.map((entry, i) => (
+                  <Cell key={i} fill={entry.fill} />
+                ))}
+                <LabelList
+                  dataKey="value"
+                  position="right"
+                  style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: 'var(--muted)' }}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
 
       {/* ── Time invested per stage ── */}
       {timeInvestmentRaw.length > 0 && (

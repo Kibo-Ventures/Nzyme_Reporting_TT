@@ -121,6 +121,38 @@ export function useFunnelDeals(filters = {}) {
   })
 }
 
+// Deals that actively entered each stage during the selected period.
+// Filters ReportingNz_deal_stage_history by changed_at (not date_added),
+// so deals like Civislend that were sourced earlier but advanced in-period are included.
+export function usePipelineThroughput(filters = {}) {
+  const { dateRange, dateFrom, dateTo } = filters
+  return useQuery({
+    queryKey: ['pipeline-throughput', dateRange, dateFrom, dateTo],
+    queryFn: async () => {
+      let query = supabase
+        .from('ReportingNz_deal_stage_history')
+        .select('stage_value, deal_name, changed_at')
+
+      if (dateRange === 'ltm') {
+        const d = new Date()
+        d.setFullYear(d.getFullYear() - 1)
+        query = query.gte('changed_at', d.toISOString())
+      } else if (dateRange === 'ytd') {
+        const d = new Date()
+        query = query.gte('changed_at', `${d.getFullYear()}-01-01`)
+      } else if (dateRange === 'custom') {
+        if (dateFrom) query = query.gte('changed_at', dateFrom)
+        if (dateTo)   query = query.lte('changed_at', dateTo + 'T23:59:59')
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
 // Count of deals currently sitting in Portfolio stage (is_active = true).
 // Used for the Portfolio KPI — excludes companies that passed through but exited.
 export function useCurrentPortfolioCount() {
