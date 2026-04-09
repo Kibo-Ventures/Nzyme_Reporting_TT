@@ -43,7 +43,7 @@ export function useTrackerData() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ReportingNz_team_members')
-        .select('name, sort_order')
+        .select('name, sort_order, email')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
       if (error) throw error

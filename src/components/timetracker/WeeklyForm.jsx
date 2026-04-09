@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTrackerData, useUserEntriesMerged, useInternalCategories, getMondayISO, addDays } from '../../hooks/useTimeEntries'
 import LoadingSpinner from '../ui/LoadingSpinner'
 import IntensityModal from './IntensityModal'
@@ -193,13 +193,19 @@ function SectionHeader({ label, count, collapsible, open, onToggle, tooltip }) {
 const WEEK_OFFSET_MIN = -8  // how far back users can go (8 weeks)
 const WEEK_OFFSET_MAX = 1   // how far forward (1 week, for planning ahead)
 
-export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) {
+export default function WeeklyForm({ userEmail, onSubmitted }) {
   const [weekOffset, setWeekOffset] = useState(() => new Date().getDay() === 1 ? -1 : 0)
   const weekStart     = getMondayISO(weekOffset)
   const weekStartNext = addDays(weekStart, 7)
 
   const { isLoading, error: dataError, dealflow, longtail, portfolio, origChannels, teamMembers } = useTrackerData()
   const { data: internalCategories = [], isLoading: internalLoading } = useInternalCategories()
+
+  // Resolve the logged-in user's team member name from their email
+  const selectedUser = teamMembers.find(
+    m => m.email?.toLowerCase() === userEmail?.toLowerCase()
+  )?.name ?? ''
+
   const userEntriesQ = useUserEntriesMerged(selectedUser, weekStart)
 
   const [entries, setEntries] = useState({})
@@ -208,15 +214,6 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
   const [submitError, setSubmitError] = useState(null)
   const [pendingRows, setPendingRows] = useState(null)
   const [showIntensityModal, setShowIntensityModal] = useState(false)
-
-  // Reset entries when user selection changes
-  const prevUser = useRef(selectedUser)
-  useEffect(() => {
-    if (prevUser.current !== selectedUser) {
-      setEntries({})
-      prevUser.current = selectedUser
-    }
-  }, [selectedUser])
 
   // Reset entries when week changes
   const prevWeek = useRef(weekStart)
@@ -425,37 +422,26 @@ export default function WeeklyForm({ selectedUser, onUserChange, onSubmitted }) 
         </div>
       </div>
 
-      {/* User selector */}
+      {/* Team member — auto-resolved from logged-in account */}
       <div style={{ marginBottom: '1.5rem' }}>
         <label
           style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}
         >
           Team member
         </label>
-        <select
-          value={selectedUser}
-          onChange={e => onUserChange(e.target.value)}
-          style={{
-            padding: '0.5rem 0.75rem',
-            fontSize: '0.9375rem',
-            fontFamily: 'var(--font-sans)',
-            border: '1px solid var(--rule)',
-            borderRadius: 8,
-            background: 'white',
-            color: selectedUser ? 'var(--ink)' : 'var(--muted)',
-            minWidth: 240,
-            cursor: 'pointer',
-          }}
-        >
-          <option value="">Select your name…</option>
-          {teamMembers.map(m => (
-            <option key={m.name} value={m.name}>{m.name}</option>
-          ))}
-        </select>
-        {userEntriesQ.isFetching && (
-          <span style={{ marginLeft: 12, fontSize: '0.8125rem', color: 'var(--muted)' }}>
-            Loading entries…
-          </span>
+        {selectedUser ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: '0.9375rem', fontFamily: 'var(--font-sans)', color: 'var(--ink)', fontWeight: 500 }}>
+              {selectedUser}
+            </span>
+            {userEntriesQ.isFetching && (
+              <span style={{ fontSize: '0.8125rem', color: 'var(--muted)' }}>Loading entries…</span>
+            )}
+          </div>
+        ) : (
+          <p style={{ fontSize: '0.875rem', color: 'var(--danger)', margin: 0 }}>
+            Your account ({userEmail}) is not linked to a team member yet. Ask an admin to add your email to the team members table.
+          </p>
         )}
       </div>
 

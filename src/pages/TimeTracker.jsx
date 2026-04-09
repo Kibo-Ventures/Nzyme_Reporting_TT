@@ -2,20 +2,20 @@ import { useState } from 'react'
 import WeeklyForm from '../components/timetracker/WeeklyForm'
 import SuccessScreen from '../components/timetracker/SuccessScreen'
 import { getMondayISO } from '../hooks/useTimeEntries'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function TimeTracker() {
-  const [selectedUser, setSelectedUser] = useState('')
+  const { user } = useAuth()
   const [submitted, setSubmitted] = useState(false)
 
   function handleReset() {
-    setSelectedUser('')
     setSubmitted(false)
   }
 
   if (submitted) {
     return (
       <SuccessScreen
-        userName={selectedUser}
+        userName={user?.email}
         weekStart={getMondayISO()}
         onReset={handleReset}
       />
@@ -24,8 +24,7 @@ export default function TimeTracker() {
 
   return (
     <WeeklyForm
-      selectedUser={selectedUser}
-      onUserChange={setSelectedUser}
+      userEmail={user?.email}
       onSubmitted={() => setSubmitted(true)}
     />
   )
