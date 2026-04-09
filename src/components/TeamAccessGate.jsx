@@ -13,7 +13,12 @@ export default function TeamAccessGate({ children }) {
       .select('id')
       .eq('email', user.email)
       .maybeSingle()
-      .then(({ data }) => setAllowed(!!data))
+      .then(({ data, error }) => {
+        console.log('[TeamAccessGate] user.email:', user.email)
+        console.log('[TeamAccessGate] data:', data)
+        console.log('[TeamAccessGate] error:', error)
+        setAllowed(!!data)
+      })
   }, [user])
 
   if (allowed === undefined) return null
