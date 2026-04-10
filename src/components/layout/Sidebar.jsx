@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 const navItems = [
   { to: '/timetracker', label: 'Time Tracker',     icon: '⏱', group: 'STAFFING' },
   { to: '/team',        label: 'Staffing Report',  icon: '📈', group: 'STAFFING' },
-  { to: '/pipeline',    label: 'Board View',        icon: '📋', group: 'REPORTING' },
+  { to: '/pipeline',    label: 'Dealflow & Portfolio Board',        icon: '📋', group: 'REPORTING' },
   { to: '/channels',    label: 'Channels',          icon: '📊', group: 'REPORTING' },
   { to: '/advisers',    label: 'Adviser Coverage',  icon: '🤝', group: 'REPORTING' },
   { to: '/funnel',      label: 'Funnel Analysis',   icon: '🔽', group: 'REPORTING' },
