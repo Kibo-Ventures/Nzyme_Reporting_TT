@@ -10,7 +10,7 @@ const navItems = [
   { to: '/advisers',    label: 'Adviser Coverage',  icon: '🤝', group: 'REPORTING' },
   { to: '/funnel',      label: 'Funnel Analysis',   icon: '🔽', group: 'REPORTING' },
   { to: '/analysis',   label: 'Dynamic Analysis',  icon: '⬡', group: 'REPORTING' },
-  { to: '/proprietary', label: 'Proprietary',       icon: '🎯', group: 'REPORTING' },
+  { to: '/proprietary', label: 'Proprietary',       icon: '🎯', group: 'REPORTING', disabled: true },
 ]
 
 export default function Sidebar() {
