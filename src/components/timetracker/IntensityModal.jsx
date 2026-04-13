@@ -17,14 +17,26 @@ export default function IntensityModal({ formData, weekStart, weekStartNext, sel
     setError(null)
     try {
       const { actualRows, expectedRows } = formData
-      const upserts = []
+
+      // Clear existing rows for both week_starts before inserting, so zeroed-out
+      // entries don't persist from a previous submission.
+      const deletes = await Promise.all([
+        supabase.from('ReportingNz_time_entries')
+          .delete().eq('user_name', selectedUser).eq('week_start', weekStart),
+        supabase.from('ReportingNz_time_entries')
+          .delete().eq('user_name', selectedUser).eq('week_start', weekStartNext),
+      ])
+      const failedDelete = deletes.find(r => r.error)
+      if (failedDelete) throw failedDelete.error
+
+      const inserts = []
       if (actualRows.length > 0)
-        upserts.push(supabase.from('ReportingNz_time_entries')
-          .upsert(actualRows.map(r => ({ ...r, intensity })), { onConflict: 'user_name,week_start,category_key' }))
+        inserts.push(supabase.from('ReportingNz_time_entries')
+          .insert(actualRows.map(r => ({ ...r, intensity }))))
       if (expectedRows.length > 0)
-        upserts.push(supabase.from('ReportingNz_time_entries')
-          .upsert(expectedRows.map(r => ({ ...r, intensity })), { onConflict: 'user_name,week_start,category_key' }))
-      const results = await Promise.all(upserts)
+        inserts.push(supabase.from('ReportingNz_time_entries')
+          .insert(expectedRows.map(r => ({ ...r, intensity }))))
+      const results = await Promise.all(inserts)
       const failed = results.find(r => r.error)
       if (failed) throw failed.error
       onSuccess()
