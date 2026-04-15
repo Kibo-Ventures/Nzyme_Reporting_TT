@@ -710,6 +710,11 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
               {(totalPctActual - 100).toFixed(1)}% over
             </span>
           )}
+          {!overPct && totalPctActual > 0 && totalPctActual < 100 && (
+            <span style={{ fontSize: '0.75rem', color: 'var(--orig-fg)' }}>
+              aim for 100%
+            </span>
+          )}
         </div>
 
         <div style={{ flex: 1 }} />

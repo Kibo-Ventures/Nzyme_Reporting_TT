@@ -32,10 +32,10 @@ export default function IntensityModal({ formData, weekStart, weekStartNext, sel
       const inserts = []
       if (actualRows.length > 0)
         inserts.push(supabase.from('ReportingNz_time_entries')
-          .insert(actualRows.map(r => ({ ...r, intensity }))))
+          .upsert(actualRows.map(r => ({ ...r, intensity })), { onConflict: 'user_name,week_start,category_key' }))
       if (expectedRows.length > 0)
         inserts.push(supabase.from('ReportingNz_time_entries')
-          .insert(expectedRows.map(r => ({ ...r, intensity }))))
+          .upsert(expectedRows.map(r => ({ ...r, intensity })), { onConflict: 'user_name,week_start,category_key' }))
       const results = await Promise.all(inserts)
       const failed = results.find(r => r.error)
       if (failed) throw failed.error
