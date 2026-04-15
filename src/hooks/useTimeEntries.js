@@ -71,6 +71,7 @@ export function useTrackerData() {
     isLoading: dealsQ.isLoading || membersQ.isLoading || channelsQ.isLoading,
     error: dealsQ.error || membersQ.error || channelsQ.error,
     dealflow: deals.filter(d => ACTIVE_STAGES.includes(d.stage)),
+    addons: deals.filter(d => d.stage === 'Add-ons (relevant now)'),
     longtail: deals.filter(d => d.stage === 'Being explored (meetings only)'),
     portfolio: deals.filter(d => d.stage === 'Portfolio'),
     origChannels: channelsQ.data ?? [],

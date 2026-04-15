@@ -6,6 +6,7 @@ import IntensityModal from './IntensityModal'
 
 const TAG = {
   deal:     { background: '#f0ebe0', color: '#5a4a30' },
+  addon:    { background: '#e8f5f2', color: '#1a6a5a' },
   longtail: { background: 'var(--longtail-bg)', color: 'var(--longtail-fg)' },
   orig:     { background: 'var(--orig-bg)',      color: 'var(--orig-fg)'      },
   portco:   { background: 'var(--portco-bg)',    color: 'var(--portco-fg)'    },
@@ -198,7 +199,7 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
   const weekStart     = getMondayISO(weekOffset)
   const weekStartNext = addDays(weekStart, 7)
 
-  const { isLoading, error: dataError, dealflow, longtail, portfolio, origChannels, teamMembers } = useTrackerData()
+  const { isLoading, error: dataError, dealflow, addons, longtail, portfolio, origChannels, teamMembers } = useTrackerData()
   const { data: internalCategories = [], isLoading: internalLoading } = useInternalCategories()
 
   // Resolve the logged-in user's team member name from their email
@@ -209,6 +210,7 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
   const userEntriesQ = useUserEntriesMerged(selectedUser, weekStart)
 
   const [entries, setEntries] = useState({})
+  const [showAddons, setShowAddons] = useState(false)
   const [showLongtail, setShowLongtail] = useState(false)
   const [showOrig, setShowOrig] = useState(false)
   const [submitError, setSubmitError] = useState(null)
@@ -291,6 +293,7 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
     }
 
     addRows(dealflow, 'deal')
+    addRows(addons, 'addon')
     addRows([...longtail, { name: 'Other (Longtail)' }], 'longtail')
     addRows(origChannels, 'orig')
     addRows(portfolio, 'portco')
@@ -515,6 +518,34 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
           ))
         )}
       </div>
+
+      {/* ── ADD-ONS ── */}
+      <SectionHeader
+        label="Dealflow - Add-ons"
+        count={addons.length}
+        tooltip="Deals in Affinity at 'Add-ons (relevant now)' stage — portfolio add-on acquisition opportunities currently being actively explored."
+        collapsible
+        open={showAddons}
+        onToggle={() => setShowAddons(v => !v)}
+      />
+      {showAddons && (
+        addons.length === 0 ? (
+          <p style={{ color: 'var(--muted)', fontSize: '0.875rem', padding: '8px 0' }}>
+            No add-on deals
+          </p>
+        ) : (
+          addons.map(d => (
+            <EntryRow
+              key={d.name}
+              label={d.name}
+              type="addon"
+              categoryKey={d.name}
+              entries={entries}
+              onChange={handleChange}
+            />
+          ))
+        )
+      )}
 
       {/* ── LONGTAIL ── */}
       <SectionHeader
