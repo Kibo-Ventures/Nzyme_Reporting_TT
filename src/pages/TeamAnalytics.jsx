@@ -143,14 +143,15 @@ function buildLifetimeData(entries, stageMap, stageFilters) {
 function buildNonDealData(entries) {
   const acc = {}
   entries.forEach(row => {
-    if (!acc[row.category_key]) acc[row.category_key] = { hrs: 0, category_type: row.category_type }
-    acc[row.category_key].hrs += (row.hrs_calculated || 0)
+    const key = `${row.category_type}::${row.category_key}`
+    if (!acc[key]) acc[key] = { hrs: 0, category_type: row.category_type, displayName: row.category_key }
+    acc[key].hrs += (row.hrs_calculated || 0)
   })
   const TYPE_ORDER = { portco: 0, orig: 1, internal: 2 }
-  return Object.entries(acc)
-    .map(([name, { hrs, category_type }]) => ({
-      name: name.length > 26 ? name.slice(0, 24) + '…' : name,
-      fullName: name,
+  return Object.values(acc)
+    .map(({ hrs, category_type, displayName }) => ({
+      name: displayName.length > 26 ? displayName.slice(0, 24) + '…' : displayName,
+      fullName: displayName,
       hrs: Math.round(hrs),
       category_type,
     }))
