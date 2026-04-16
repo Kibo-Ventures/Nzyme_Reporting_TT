@@ -243,6 +243,39 @@ function buildLifetimeMatrix(entries, stageMap, stageFilters) {
   return { users, dealsMap, sortedDeals, userTotals, grandTotal }
 }
 
+function buildCategoryHoursData(dealEntries, nonDealEntries) {
+  const CATEGORY_MAP = {
+    deal:     'Dealflow',
+    longtail: 'Dealflow',
+    addon:    'Add-ons',
+    portco:   'Portfolio',
+    orig:     'Origination',
+    internal: 'Internal',
+  }
+  const CATEGORY_COLORS = {
+    'Dealflow':    '#2d6a4a',
+    'Add-ons':     '#1a6a5a',
+    'Portfolio':   '#3a4080',
+    'Origination': '#c07830',
+    'Internal':    '#74b49b',
+  }
+  const acc = {}
+  ;[...dealEntries, ...nonDealEntries].forEach(row => {
+    const cat = CATEGORY_MAP[row.category_type] || 'Internal'
+    acc[cat] = (acc[cat] || 0) + (row.hrs_calculated || 0)
+  })
+  const total = Object.values(acc).reduce((s, v) => s + v, 0) || 1
+  return Object.entries(acc)
+    .map(([name, hrs]) => ({
+      name,
+      hrs: Math.round(hrs),
+      pct: parseFloat(((hrs / total) * 100).toFixed(1)),
+      fill: CATEGORY_COLORS[name] ?? '#9a9589',
+    }))
+    .filter(d => d.hrs > 0)
+    .sort((a, b) => b.hrs - a.hrs)
+}
+
 function buildStageInvestmentData(entries) {
   const acc = {}
   entries.forEach(({ stage_value, total_hours }) => {
@@ -642,6 +675,7 @@ export default function TeamAnalytics() {
   const fteData        = useMemo(() => buildFteData(tfEntries, timeframe, stageMap, fteFilters), [tfEntries, timeframe, stageMap, fteFilters])
   const lifetimeData   = useMemo(() => buildLifetimeData(lifetimeEntries, stageMap, lifetimeFilters), [lifetimeEntries, stageMap, lifetimeFilters])
   const nonDealData = useMemo(() => buildNonDealData(nonDealEntries), [nonDealEntries])
+  const categoryHoursData = useMemo(() => buildCategoryHoursData(lifetimeEntries, nonDealEntries), [lifetimeEntries, nonDealEntries])
   const stageInvestData = useMemo(() => buildStageInvestmentData(stageInvestEntries), [stageInvestEntries])
 
   const timeLabel = timeframe === 'week'
@@ -929,48 +963,97 @@ export default function TeamAnalytics() {
             </Accordion>
           </div>
 
-          {/* ── Row 6: Lifetime Hours by Stage — donut, legend below ── */}
-          <ChartCard
-            title="Lifetime Hours by Stage"
-            description="Share of all tracked deal hours invested at each stage."
-          >
-            {stageInvestQ.isLoading ? (
-              <LoadingSpinner />
-            ) : stageInvestData.length === 0 ? (
-              <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>No stage investment data found.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={stageInvestData}
-                    dataKey="hrs"
-                    nameKey="name"
-                    cx="50%"
-                    cy="46%"
-                    outerRadius={100}
-                    innerRadius={52}
-                    paddingAngle={2}
-                  >
-                    {stageInvestData.map((entry, i) => (
-                      <Cell key={i} fill={PIE_STAGE_COLORS[entry.name] ?? '#9a9589'} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name, props) => [`${value} hrs (${props.payload.pct}%)`, name]}
-                    contentStyle={{ fontSize: 12 }}
-                  />
-                  <Legend
-                    iconType="circle"
-                    iconSize={8}
-                    layout="horizontal"
-                    verticalAlign="bottom"
-                    align="center"
-                    wrapperStyle={{ fontSize: '0.75rem', fontFamily: 'DM Sans, sans-serif', paddingTop: 12 }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
+          {/* ── Row 6: two-column donut grid ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 0, alignItems: 'stretch' }}>
+
+            {/* Left: Lifetime Hours by Category */}
+            <ChartCard
+              style={{ marginBottom: 0 }}
+              title="Lifetime Hours by Category"
+              description="Total hours split across Dealflow, Add-ons, Portfolio, Origination, and Internal."
+            >
+              {(lifetimeQ.isLoading || nonDealQ.isLoading) ? (
+                <LoadingSpinner />
+              ) : categoryHoursData.length === 0 ? (
+                <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>No hours logged.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={categoryHoursData}
+                      dataKey="hrs"
+                      nameKey="name"
+                      cx="50%"
+                      cy="46%"
+                      outerRadius={100}
+                      innerRadius={52}
+                      paddingAngle={2}
+                    >
+                      {categoryHoursData.map((entry, i) => (
+                        <Cell key={i} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value, name, props) => [`${value} hrs (${props.payload.pct}%)`, name]}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      layout="horizontal"
+                      verticalAlign="bottom"
+                      align="center"
+                      wrapperStyle={{ fontSize: '0.75rem', fontFamily: 'DM Sans, sans-serif', paddingTop: 12 }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
+
+            {/* Right: Lifetime Hours by Stage */}
+            <ChartCard
+              style={{ marginBottom: 0 }}
+              title="Lifetime Hours by Stage"
+              description="Share of all tracked deal hours invested at each stage."
+            >
+              {stageInvestQ.isLoading ? (
+                <LoadingSpinner />
+              ) : stageInvestData.length === 0 ? (
+                <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>No stage investment data found.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={stageInvestData}
+                      dataKey="hrs"
+                      nameKey="name"
+                      cx="50%"
+                      cy="46%"
+                      outerRadius={100}
+                      innerRadius={52}
+                      paddingAngle={2}
+                    >
+                      {stageInvestData.map((entry, i) => (
+                        <Cell key={i} fill={PIE_STAGE_COLORS[entry.name] ?? '#9a9589'} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value, name, props) => [`${value} hrs (${props.payload.pct}%)`, name]}
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      layout="horizontal"
+                      verticalAlign="bottom"
+                      align="center"
+                      wrapperStyle={{ fontSize: '0.75rem', fontFamily: 'DM Sans, sans-serif', paddingTop: 12 }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </ChartCard>
+          </div>
         </>
       )}
     </div>
