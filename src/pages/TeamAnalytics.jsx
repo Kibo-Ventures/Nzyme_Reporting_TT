@@ -13,12 +13,14 @@ import InfoTooltip from '../components/ui/InfoTooltip'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const ALL_STAGES = ['DD Phase', 'Working on Deal', 'Under Analysis']
+const ALL_STAGES = ['DD Phase', 'Working on Deal', 'Under Analysis', 'Being Explored', 'Add-ons']
 
 const STAGE_COLORS = {
   'DD Phase':        '#1a3a2a',
   'Working on Deal': '#2e6da4',
   'Under Analysis':  '#c07830',
+  'Being Explored':  '#6b3a80',
+  'Add-ons':         '#1a6a5a',
 }
 
 const PIE_STAGE_COLORS = {
@@ -42,6 +44,18 @@ const CAT_LABELS = {
   internal: 'Internal',
   portco:   'Portfolio',
   orig:     'Origination',
+}
+
+const NON_DEAL_COLORS = {
+  portco:   '#3a4080',
+  orig:     '#c07830',
+  internal: '#74b49b',
+}
+
+const NON_DEAL_LABELS = {
+  portco:   'Portfolio',
+  orig:     'Origination',
+  internal: 'Internal',
 }
 
 // ── Data processing helpers ───────────────────────────────────────────────────
