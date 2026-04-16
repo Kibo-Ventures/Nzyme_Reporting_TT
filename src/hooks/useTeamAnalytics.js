@@ -7,6 +7,8 @@ export function normalizeStage(s) {
   const l = s.toLowerCase()
   if (l.includes('dd')) return 'DD Phase'
   if (l.includes('analysis') || l.includes('analys')) return 'Under Analysis'
+  if (l.includes('explo')) return 'Being Explored'
+  if (l.includes('add-on') || l.includes('addon')) return 'Add-ons'
   return 'Working on Deal'
 }
 
@@ -62,7 +64,23 @@ export function useLifetimeHoursEntries() {
       const { data, error } = await supabase
         .from('ReportingNz_time_entries')
         .select('user_name, category_key, category_type, hrs_calculated')
-        .in('category_type', ['deal', 'longtail'])
+        .in('category_type', ['deal', 'longtail', 'addon'])
+        .gt('hrs_calculated', 0)
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+export function useLifetimeNonDealEntries() {
+  return useQuery({
+    queryKey: ['lifetime-non-deal-entries'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ReportingNz_time_entries')
+        .select('user_name, category_key, category_type, hrs_calculated')
+        .in('category_type', ['internal', 'portco', 'orig'])
         .gt('hrs_calculated', 0)
       if (error) throw error
       return data || []
