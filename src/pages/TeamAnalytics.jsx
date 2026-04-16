@@ -861,7 +861,75 @@ export default function TeamAnalytics() {
             )}
           </ChartCard>
 
-          {/* ── Row 4: Lifetime Hours by Stage — donut, legend below ── */}
+          {/* ── Row 4: Lifetime Hours per Non-Deal Task — full width ── */}
+          <ChartCard
+            title="Lifetime Hours per Non-Deal Task"
+            description="Cumulative actual hours invested in portfolio, origination, and internal activities across all time."
+          >
+            {nonDealQ.isLoading ? (
+              <LoadingSpinner />
+            ) : nonDealData.length === 0 ? (
+              <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '2rem 0' }}>
+                No non-deal hours logged.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={nonDealHeight}>
+                <BarChart data={nonDealData} layout="vertical" margin={{ top: 4, right: 64, bottom: 8, left: 8 }}>
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#d4dce8" />
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 10, fontFamily: 'DM Mono, monospace' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    width={180}
+                    tick={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value) => [`${value} hrs`, 'Actual hours']}
+                    labelStyle={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600 }}
+                    contentStyle={{ fontSize: 12 }}
+                  />
+                  <Bar dataKey="hrs" radius={[0, 4, 4, 0]}>
+                    {nonDealData.map((entry, i) => (
+                      <Cell key={i} fill={NON_DEAL_COLORS[entry.category_type] ?? '#9a9589'} />
+                    ))}
+                    <LabelList
+                      dataKey="hrs"
+                      position="right"
+                      formatter={v => `${v}h`}
+                      style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', fill: '#0f0f0f', fontWeight: 600 }}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 12 }}>
+              {Object.entries(NON_DEAL_LABELS).map(([key, label]) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.6875rem', color: 'var(--muted)' }}>
+                  <span style={{ width: 9, height: 9, borderRadius: 2, background: NON_DEAL_COLORS[key], flexShrink: 0, display: 'inline-block' }} />
+                  {label}
+                </div>
+              ))}
+            </div>
+          </ChartCard>
+
+          {/* ── Row 5: Breakdown Lifetime Hours — standalone accordion card ── */}
+          <div style={{ background: 'white', border: '1px solid var(--rule)', borderRadius: 12, padding: '16px 24px 20px', marginBottom: 28, overflow: 'hidden', minWidth: 0 }}>
+            <Accordion summary="Breakdown Lifetime Hours (All Categories — Matrix View)" noSeparator>
+              <FullLifetimeMatrix
+                dealEntries={lifetimeEntries}
+                nonDealEntries={nonDealEntries}
+              />
+            </Accordion>
+          </div>
+
+          {/* ── Row 6: Lifetime Hours by Stage — donut, legend below ── */}
           <ChartCard
             title="Lifetime Hours by Stage"
             description="Share of all tracked deal hours invested at each stage."
