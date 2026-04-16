@@ -5,7 +5,7 @@ import {
   PieChart, Pie, Legend,
 } from 'recharts'
 import { shortName } from '../lib/utils'
-import { useDealStageMap, useTimeframeEntries, useLifetimeHoursEntries } from '../hooks/useTeamAnalytics'
+import { useDealStageMap, useTimeframeEntries, useLifetimeHoursEntries, useLifetimeNonDealEntries } from '../hooks/useTeamAnalytics'
 import { useStageTimeInvestment } from '../hooks/useFunnelAnalysis'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import PageBanner from '../components/ui/PageBanner'
@@ -630,15 +630,18 @@ export default function TeamAnalytics() {
   const tfEntriesQ = useTimeframeEntries(timeframe)
   const lifetimeQ = useLifetimeHoursEntries()
   const stageInvestQ = useStageTimeInvestment()
+  const nonDealQ = useLifetimeNonDealEntries()
 
   const stageMap = stageMapQ.data ?? {}
   const tfEntries = tfEntriesQ.data ?? []
   const lifetimeEntries = lifetimeQ.data ?? []
   const stageInvestEntries = stageInvestQ.data ?? []
+  const nonDealEntries = nonDealQ.data ?? []
 
   const capacityData   = useMemo(() => buildCapacityData(tfEntries, timeframe), [tfEntries, timeframe])
   const fteData        = useMemo(() => buildFteData(tfEntries, timeframe, stageMap, fteFilters), [tfEntries, timeframe, stageMap, fteFilters])
   const lifetimeData   = useMemo(() => buildLifetimeData(lifetimeEntries, stageMap, lifetimeFilters), [lifetimeEntries, stageMap, lifetimeFilters])
+  const nonDealData = useMemo(() => buildNonDealData(nonDealEntries), [nonDealEntries])
   const stageInvestData = useMemo(() => buildStageInvestmentData(stageInvestEntries), [stageInvestEntries])
 
   const timeLabel = timeframe === 'week'
@@ -653,6 +656,7 @@ export default function TeamAnalytics() {
   const fteHeight = Math.max(260, 44 + fteData.length * 26)
   // Lifetime: slightly taller bars (28 px) so long deal names stay readable
   const lifeHeight = Math.max(140, 44 + lifetimeData.length * 28)
+  const nonDealHeight = Math.max(140, 44 + nonDealData.length * 28)
 
   return (
     <div style={{ maxWidth: 1200, width: '100%', margin: '0 auto', padding: '2rem 1.5rem 4rem', boxSizing: 'border-box' }}>
