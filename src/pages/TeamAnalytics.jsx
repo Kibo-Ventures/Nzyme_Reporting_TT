@@ -859,13 +859,6 @@ export default function TeamAnalytics() {
                 </BarChart>
               </ResponsiveContainer>
             )}
-            <Accordion summary="Breakdown Lifetime Hours (Matrix View)">
-              <LifetimeMatrix
-                entries={lifetimeEntries}
-                stageMap={stageMap}
-                stageFilters={lifetimeFilters}
-              />
-            </Accordion>
           </ChartCard>
 
           {/* ── Row 4: Lifetime Hours by Stage — donut, legend below ── */}
