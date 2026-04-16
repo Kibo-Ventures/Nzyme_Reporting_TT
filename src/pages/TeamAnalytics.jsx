@@ -108,7 +108,7 @@ function buildFteData(entries, timeframe, stageMap, stageFilters) {
 
   const acc = {}
   entries
-    .filter(r => ['deal', 'longtail'].includes(r.category_type))
+    .filter(r => ['deal', 'longtail', 'addon'].includes(r.category_type))
     .forEach(row => {
       acc[row.category_key] = (acc[row.category_key] || 0) + (row.pct_expected || 0)
     })
@@ -138,6 +138,61 @@ function buildLifetimeData(entries, stageMap, stageFilters) {
     }))
     .filter(d => d.hrs > 0 && stageFilters.has(d.stage))
     .sort((a, b) => b.hrs - a.hrs)
+}
+
+function buildNonDealData(entries) {
+  const acc = {}
+  entries.forEach(row => {
+    if (!acc[row.category_key]) acc[row.category_key] = { hrs: 0, category_type: row.category_type }
+    acc[row.category_key].hrs += (row.hrs_calculated || 0)
+  })
+  const TYPE_ORDER = { portco: 0, orig: 1, internal: 2 }
+  return Object.entries(acc)
+    .map(([name, { hrs, category_type }]) => ({
+      name: name.length > 26 ? name.slice(0, 24) + '…' : name,
+      fullName: name,
+      hrs: Math.round(hrs),
+      category_type,
+    }))
+    .filter(d => d.hrs > 0)
+    .sort((a, b) =>
+      (TYPE_ORDER[a.category_type] ?? 9) - (TYPE_ORDER[b.category_type] ?? 9) ||
+      b.hrs - a.hrs
+    )
+}
+
+function buildFullLifetimeMatrix(dealEntries, nonDealEntries) {
+  const allEntries = [...dealEntries, ...nonDealEntries]
+  const users = [...new Set(allEntries.map(e => e.user_name))].sort()
+
+  const SECTION_MAP = {
+    deal:     'Dealflow',
+    longtail: 'Dealflow',
+    addon:    'Add-ons',
+    portco:   'Portfolio',
+    orig:     'Origination',
+    internal: 'Internal',
+  }
+  const SECTION_ORDER = ['Dealflow', 'Add-ons', 'Portfolio', 'Origination', 'Internal']
+
+  const groups = {}
+  SECTION_ORDER.forEach(s => (groups[s] = {}))
+
+  const userTotals = {}
+  users.forEach(u => (userTotals[u] = 0))
+  let grandTotal = 0
+
+  allEntries.forEach(row => {
+    const section = SECTION_MAP[row.category_type] || 'Internal'
+    if (!groups[section][row.category_key]) groups[section][row.category_key] = { _rowTotal: 0 }
+    groups[section][row.category_key][row.user_name] =
+      (groups[section][row.category_key][row.user_name] || 0) + (row.hrs_calculated || 0)
+    groups[section][row.category_key]._rowTotal += (row.hrs_calculated || 0)
+    userTotals[row.user_name] = (userTotals[row.user_name] || 0) + (row.hrs_calculated || 0)
+    grandTotal += (row.hrs_calculated || 0)
+  })
+
+  return { users, groups, SECTION_ORDER, userTotals, grandTotal }
 }
 
 function buildCapacityMatrix(entries, timeframe) {
@@ -502,6 +557,47 @@ function LifetimeMatrix({ entries, stageMap, stageFilters }) {
   ]
 
   return <DenseTable headers={headers} rows={rows} footerRow={footer} />
+}
+
+function FullLifetimeMatrix({ dealEntries, nonDealEntries }) {
+  const { users, groups, SECTION_ORDER, userTotals, grandTotal } = useMemo(
+    () => buildFullLifetimeMatrix(dealEntries, nonDealEntries),
+    [dealEntries, nonDealEntries]
+  )
+
+  if (!users.length) return <p style={{ color: 'var(--muted)', fontSize: '0.875rem' }}>No data.</p>
+
+  const shortUsers = users.map(u => shortName(u))
+  const headers = ['Category', ...shortUsers, 'Total Hrs']
+  const rows = []
+  const groupRowIndices = new Set()
+
+  SECTION_ORDER.forEach(section => {
+    const cats = Object.keys(groups[section] || {}).sort(
+      (a, b) => groups[section][b]._rowTotal - groups[section][a]._rowTotal
+    )
+    if (!cats.length) return
+    groupRowIndices.add(rows.length)
+    rows.push([section, ...users.map(() => ''), ''])
+    cats.forEach(cat => {
+      rows.push([
+        cat,
+        ...users.map(u => {
+          const v = groups[section][cat][u]
+          return v ? Math.round(v) : '–'
+        }),
+        Math.round(groups[section][cat]._rowTotal),
+      ])
+    })
+  })
+
+  const footer = [
+    'Team Totals',
+    ...users.map(u => Math.round(userTotals[u] || 0)),
+    Math.round(grandTotal),
+  ]
+
+  return <DenseTable headers={headers} rows={rows} footerRow={footer} groupRows={groupRowIndices} />
 }
 
 // Custom label for stacked bar totals
