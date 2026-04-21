@@ -11,6 +11,7 @@ const navItems = [
   { to: '/funnel',      label: 'Funnel Analysis',   icon: '🔽', group: 'REPORTING' },
   { to: '/analysis',   label: 'Dynamic Analysis',  icon: '⬡', group: 'REPORTING' },
   { to: '/proprietary', label: 'Proprietary',       icon: '🎯', group: 'REPORTING', disabled: true },
+  { to: '/fundraising', label: 'Fundraising Activity', icon: '💰', group: 'REPORTING' },
 ]
 
 export default function Sidebar() {
