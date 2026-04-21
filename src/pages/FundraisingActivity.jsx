@@ -166,11 +166,11 @@ export default function FundraisingActivity() {
   const { filters } = useFilters()
 
   const [teamMembers, setTeamMembers]           = useState([])
-  const [investorType, setInvestorType]         = useState('all')
+  const [investorType, setInvestorType]         = useState([])
   const [engagementEffort, setEngagementEffort] = useState([])
-  const [overallStatus, setOverallStatus]       = useState('all')
-  const [portugalStatus, setPortugalStatus]     = useState('all')
-  const [germanyStatus, setGermanyStatus]       = useState('all')
+  const [overallStatus, setOverallStatus]       = useState([])
+  const [portugalStatus, setPortugalStatus]     = useState([])
+  const [germanyStatus, setGermanyStatus]       = useState([])
 
   const [topN, setTopN] = useState(10)
 
@@ -234,26 +234,26 @@ export default function FundraisingActivity() {
         teamMembers.some(m => r.partner_names.includes(m))
       )
     }
-    if (investorType    !== 'all') rows = rows.filter(r => splitInvestorType(r.investor_type).includes(investorType))
+    if (investorType.length > 0)     rows = rows.filter(r => investorType.some(t => splitInvestorType(r.investor_type).includes(t)))
     if (engagementEffort.length > 0) rows = rows.filter(r => engagementEffort.includes(r.engagement_effort))
-    if (overallStatus   !== 'all') rows = rows.filter(r => r.overall_status    === overallStatus)
-    if (portugalStatus  !== 'all') rows = rows.filter(r => r.portugal_status   === portugalStatus)
-    if (germanyStatus   !== 'all') rows = rows.filter(r => r.germany_status    === germanyStatus)
+    if (overallStatus.length > 0)    rows = rows.filter(r => overallStatus.includes(r.overall_status))
+    if (portugalStatus.length > 0)   rows = rows.filter(r => portugalStatus.includes(r.portugal_status))
+    if (germanyStatus.length > 0)    rows = rows.filter(r => germanyStatus.includes(r.germany_status))
 
     return rows
   }, [raw, filters, teamMembers, investorType, engagementEffort, overallStatus, portugalStatus, germanyStatus])
 
   const hasActiveFilter =
-    teamMembers.length > 0 || investorType !== 'all' || engagementEffort.length > 0 ||
-    overallStatus !== 'all' || portugalStatus !== 'all' || germanyStatus !== 'all'
+    teamMembers.length > 0 || investorType.length > 0 || engagementEffort.length > 0 ||
+    overallStatus.length > 0 || portugalStatus.length > 0 || germanyStatus.length > 0
 
   function clearFilters() {
     setTeamMembers([])
-    setInvestorType('all')
+    setInvestorType([])
     setEngagementEffort([])
-    setOverallStatus('all')
-    setPortugalStatus('all')
-    setGermanyStatus('all')
+    setOverallStatus([])
+    setPortugalStatus([])
+    setGermanyStatus([])
   }
 
   // ── LP chart data ────────────────────────────────────────────────────────────
@@ -380,64 +380,43 @@ export default function FundraisingActivity() {
       </h1>
 
       {/* Filters */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 16, marginBottom: 28 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{
-            fontSize: '0.6875rem', fontWeight: 600,
-            textTransform: 'uppercase', letterSpacing: '0.05em',
-            color: 'var(--muted)',
-          }}>
-            Team Member
-          </label>
-          <MultiSelect
-            options={filterOptions.members}
-            value={teamMembers}
-            onChange={setTeamMembers}
-            placeholder="Team Member"
-          />
+      {[
+        { label: 'Team Member',      options: filterOptions.members,    value: teamMembers,      onChange: setTeamMembers,      placeholder: 'Team Member' },
+        { label: 'Investor Type',    options: filterOptions.invTypes,   value: investorType,     onChange: setInvestorType,     placeholder: 'Investor Type' },
+        { label: 'Engagement Effort',options: filterOptions.efforts,    value: engagementEffort, onChange: setEngagementEffort, placeholder: 'Effort' },
+        { label: 'Overall Status',   options: filterOptions.statuses,   value: overallStatus,    onChange: setOverallStatus,    placeholder: 'Status' },
+        { label: 'Portugal Status',  options: filterOptions.ptStatuses, value: portugalStatus,   onChange: setPortugalStatus,   placeholder: 'PT Status' },
+        { label: 'Germany Status',   options: filterOptions.deStatuses, value: germanyStatus,    onChange: setGermanyStatus,    placeholder: 'DE Status' },
+      ].reduce((rows, item, i) => {
+        const rowIdx = Math.floor(i / 3)
+        if (!rows[rowIdx]) rows[rowIdx] = []
+        rows[rowIdx].push(item)
+        return rows
+      }, []).map((row, rowIdx) => (
+        <div key={rowIdx} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: rowIdx === 0 ? 12 : 0 }}>
+          {row.map(f => (
+            <div key={f.label} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{
+                fontSize: '0.6875rem', fontWeight: 600,
+                textTransform: 'uppercase', letterSpacing: '0.05em',
+                color: 'var(--muted)',
+              }}>
+                {f.label}
+              </label>
+              <MultiSelect
+                options={f.options}
+                value={f.value}
+                onChange={f.onChange}
+                placeholder={f.placeholder}
+                block
+              />
+            </div>
+          ))}
         </div>
+      ))}
 
-        <FilterSelect
-          label="Investor Type"
-          options={filterOptions.invTypes}
-          value={investorType}
-          onChange={setInvestorType}
-        />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{
-            fontSize: '0.6875rem', fontWeight: 600,
-            textTransform: 'uppercase', letterSpacing: '0.05em',
-            color: 'var(--muted)',
-          }}>
-            Engagement Effort
-          </label>
-          <MultiSelect
-            options={filterOptions.efforts}
-            value={engagementEffort}
-            onChange={setEngagementEffort}
-            placeholder="Effort"
-          />
-        </div>
-        <FilterSelect
-          label="Overall Status"
-          options={filterOptions.statuses}
-          value={overallStatus}
-          onChange={setOverallStatus}
-        />
-        <FilterSelect
-          label="Portugal Status"
-          options={filterOptions.ptStatuses}
-          value={portugalStatus}
-          onChange={setPortugalStatus}
-        />
-        <FilterSelect
-          label="Germany Status"
-          options={filterOptions.deStatuses}
-          value={germanyStatus}
-          onChange={setGermanyStatus}
-        />
-
-        {hasActiveFilter && (
+      {hasActiveFilter && (
+        <div style={{ marginBottom: 16 }}>
           <button
             onClick={clearFilters}
             style={{
@@ -449,13 +428,14 @@ export default function FundraisingActivity() {
               borderRadius: '8px',
               cursor: 'pointer',
               fontFamily: 'var(--font-sans)',
-              alignSelf: 'flex-end',
             }}
           >
             Clear filters
           </button>
-        )}
-      </div>
+        </div>
+      )}
+
+      <div style={{ marginBottom: 28 }} />
 
       {/* KPI cards */}
       <div style={{

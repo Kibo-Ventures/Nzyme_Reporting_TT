@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-export default function MultiSelect({ options = [], value = [], onChange, placeholder = 'All' }) {
+export default function MultiSelect({ options = [], value = [], onChange, placeholder = 'All', block = false }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -25,7 +25,7 @@ export default function MultiSelect({ options = [], value = [], onChange, placeh
   const label = value.length === 0 ? `All ${placeholder}s` : `${placeholder} (${value.length})`
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={ref} style={{ position: 'relative', display: block ? 'block' : 'inline-block' }}>
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -41,6 +41,7 @@ export default function MultiSelect({ options = [], value = [], onChange, placeh
           borderRadius: '8px',
           cursor: 'pointer',
           whiteSpace: 'nowrap',
+          width: block ? '100%' : undefined,
         }}
       >
         {label}
