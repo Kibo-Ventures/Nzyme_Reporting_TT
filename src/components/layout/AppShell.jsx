@@ -5,15 +5,16 @@ import { AiChatPanel } from '../chat/AiChatPanel'
 
 export default function AppShell() {
   const { pathname } = useLocation()
-  const showFilters = pathname !== '/timetracker' && pathname !== '/team' && pathname !== '/fundraising'
+  const showFilters = pathname !== '/timetracker' && pathname !== '/team'
   const disableDateRange = ['/pipeline'].includes(pathname)
   const hideChannel = pathname === '/advisers'
+  const hideDealFilters = pathname === '/fundraising'
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--paper)' }}>
       <Sidebar />
       <main className="flex-1 overflow-y-auto flex flex-col">
-        {showFilters && <FilterBar disableDateRange={disableDateRange} hideChannel={hideChannel} />}
+        {showFilters && <FilterBar disableDateRange={disableDateRange} hideChannel={hideChannel} hideDealFilters={hideDealFilters} />}
         <Outlet />
       </main>
       {!pathname.startsWith('/timetracker') && <AiChatPanel />}

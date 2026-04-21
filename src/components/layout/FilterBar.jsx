@@ -9,7 +9,7 @@ const DATE_PILLS = [
   { key: 'custom', label: 'Custom' },
 ]
 
-export default function FilterBar({ disableDateRange = false, hideChannel = false }) {
+export default function FilterBar({ disableDateRange = false, hideChannel = false, hideDealFilters = false }) {
   const { filters, setFilter } = useFilters()
   const dealCaptainQuery = useDealCaptainOptions()
   const stageQuery = useStageOptions()
@@ -110,7 +110,7 @@ export default function FilterBar({ disableDateRange = false, hideChannel = fals
       <div style={{ width: '1px', height: '20px', background: 'var(--rule)', flexShrink: 0 }} />
 
       {/* Dropdowns */}
-      {isLoading ? (
+      {!hideDealFilters && (isLoading ? (
         <span style={{ fontSize: '0.8125rem', color: 'var(--muted)' }}>Loading filters…</span>
       ) : (
         <>
@@ -148,7 +148,7 @@ export default function FilterBar({ disableDateRange = false, hideChannel = fals
             </select>
           )}
         </>
-      )}
+      ))}
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />

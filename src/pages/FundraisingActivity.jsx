@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts'
 import { useLPDashboard } from '../hooks/useLPDashboard'
+import { useFilters } from '../hooks/useFilters'
 import KpiCard from '../components/ui/KpiCard'
 import MultiSelect from '../components/ui/MultiSelect'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
@@ -162,6 +163,7 @@ function SortTh({ label, sortKey, current, dir, onSort }) {
 
 export default function FundraisingActivity() {
   const { data: raw = [], isLoading, isError } = useLPDashboard()
+  const { filters } = useFilters()
 
   const [teamMembers, setTeamMembers]           = useState([])
   const [investorType, setInvestorType]         = useState('all')
@@ -212,6 +214,20 @@ export default function FundraisingActivity() {
   const filteredData = useMemo(() => {
     let rows = raw
 
+    // Date range filter applied to interaction_date
+    const { dateRange, dateFrom, dateTo } = filters
+    if (dateRange === 'ltm') {
+      const cutoff = new Date()
+      cutoff.setFullYear(cutoff.getFullYear() - 1)
+      rows = rows.filter(r => r.interaction_date && new Date(r.interaction_date) >= cutoff)
+    } else if (dateRange === 'ytd') {
+      const cutoff = new Date(`${new Date().getFullYear()}-01-01`)
+      rows = rows.filter(r => r.interaction_date && new Date(r.interaction_date) >= cutoff)
+    } else if (dateRange === 'custom') {
+      if (dateFrom) rows = rows.filter(r => r.interaction_date && new Date(r.interaction_date) >= new Date(dateFrom))
+      if (dateTo)   rows = rows.filter(r => r.interaction_date && new Date(r.interaction_date) <= new Date(dateTo + 'T23:59:59'))
+    }
+
     if (teamMembers.length > 0) {
       rows = rows.filter(r =>
         Array.isArray(r.partner_names) &&
@@ -225,7 +241,7 @@ export default function FundraisingActivity() {
     if (germanyStatus   !== 'all') rows = rows.filter(r => r.germany_status    === germanyStatus)
 
     return rows
-  }, [raw, teamMembers, investorType, engagementEffort, overallStatus, portugalStatus, germanyStatus])
+  }, [raw, filters, teamMembers, investorType, engagementEffort, overallStatus, portugalStatus, germanyStatus])
 
   const hasActiveFilter =
     teamMembers.length > 0 || investorType !== 'all' || engagementEffort !== 'all' ||
