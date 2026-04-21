@@ -167,7 +167,7 @@ export default function FundraisingActivity() {
 
   const [teamMembers, setTeamMembers]           = useState([])
   const [investorType, setInvestorType]         = useState('all')
-  const [engagementEffort, setEngagementEffort] = useState('all')
+  const [engagementEffort, setEngagementEffort] = useState([])
   const [overallStatus, setOverallStatus]       = useState('all')
   const [portugalStatus, setPortugalStatus]     = useState('all')
   const [germanyStatus, setGermanyStatus]       = useState('all')
@@ -235,7 +235,7 @@ export default function FundraisingActivity() {
       )
     }
     if (investorType    !== 'all') rows = rows.filter(r => splitInvestorType(r.investor_type).includes(investorType))
-    if (engagementEffort !== 'all') rows = rows.filter(r => r.engagement_effort === engagementEffort)
+    if (engagementEffort.length > 0) rows = rows.filter(r => engagementEffort.includes(r.engagement_effort))
     if (overallStatus   !== 'all') rows = rows.filter(r => r.overall_status    === overallStatus)
     if (portugalStatus  !== 'all') rows = rows.filter(r => r.portugal_status   === portugalStatus)
     if (germanyStatus   !== 'all') rows = rows.filter(r => r.germany_status    === germanyStatus)
@@ -244,13 +244,13 @@ export default function FundraisingActivity() {
   }, [raw, filters, teamMembers, investorType, engagementEffort, overallStatus, portugalStatus, germanyStatus])
 
   const hasActiveFilter =
-    teamMembers.length > 0 || investorType !== 'all' || engagementEffort !== 'all' ||
+    teamMembers.length > 0 || investorType !== 'all' || engagementEffort.length > 0 ||
     overallStatus !== 'all' || portugalStatus !== 'all' || germanyStatus !== 'all'
 
   function clearFilters() {
     setTeamMembers([])
     setInvestorType('all')
-    setEngagementEffort('all')
+    setEngagementEffort([])
     setOverallStatus('all')
     setPortugalStatus('all')
     setGermanyStatus('all')
@@ -403,12 +403,21 @@ export default function FundraisingActivity() {
           value={investorType}
           onChange={setInvestorType}
         />
-        <FilterSelect
-          label="Engagement Effort"
-          options={filterOptions.efforts}
-          value={engagementEffort}
-          onChange={setEngagementEffort}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <label style={{
+            fontSize: '0.6875rem', fontWeight: 600,
+            textTransform: 'uppercase', letterSpacing: '0.05em',
+            color: 'var(--muted)',
+          }}>
+            Engagement Effort
+          </label>
+          <MultiSelect
+            options={filterOptions.efforts}
+            value={engagementEffort}
+            onChange={setEngagementEffort}
+            placeholder="Effort"
+          />
+        </div>
         <FilterSelect
           label="Overall Status"
           options={filterOptions.statuses}
