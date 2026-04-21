@@ -170,6 +170,8 @@ export default function FundraisingActivity() {
   const [portugalStatus, setPortugalStatus]     = useState('all')
   const [germanyStatus, setGermanyStatus]       = useState('all')
 
+  const [topN, setTopN] = useState(10)
+
   const [granularity, setGranularity]   = useState('monthly')
   const [includeNotes, setIncludeNotes] = useState(false)
 
@@ -237,6 +239,19 @@ export default function FundraisingActivity() {
     setPortugalStatus('all')
     setGermanyStatus('all')
   }
+
+  // ── LP chart data ────────────────────────────────────────────────────────────
+
+  const lpChartData = useMemo(() => {
+    const byLp = {}
+    filteredData.forEach(row => {
+      const name = row.lp_name || '—'
+      if (!byLp[name]) byLp[name] = { lpName: name, count: 0 }
+      byLp[name].count++
+    })
+    const sorted = Object.values(byLp).sort((a, b) => b.count - a.count)
+    return topN === 'all' ? sorted : sorted.slice(0, topN)
+  }, [filteredData, topN])
 
   // ── KPI totals ───────────────────────────────────────────────────────────────
 
@@ -428,6 +443,86 @@ export default function FundraisingActivity() {
         <KpiCard title="Emails Sent"        value={kpiTotals.email_sent} />
         <KpiCard title="Email Responses"    value={kpiTotals.email_response} />
         <KpiCard title="Meetings"           value={kpiTotals.meeting} />
+      </div>
+
+      {/* Interactions per LP chart */}
+      <div style={{
+        border: '1px solid var(--rule)',
+        borderRadius: 12,
+        padding: '20px 24px',
+        marginBottom: 32,
+        background: 'white',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 20,
+        }}>
+          <h2 style={{
+            fontFamily: 'DM Serif Display, serif',
+            fontSize: '1.125rem',
+            fontWeight: 400,
+            color: 'var(--ink)',
+            margin: 0,
+          }}>
+            Interactions per LP
+          </h2>
+          <TogglePair
+            options={[
+              { key: 10,    label: 'Top 10' },
+              { key: 25,    label: 'Top 25' },
+              { key: 50,    label: 'Top 50' },
+              { key: 'all', label: 'All' },
+            ]}
+            value={topN}
+            onChange={setTopN}
+          />
+        </div>
+        <div style={{
+          overflowY: topN === 'all' ? 'auto' : 'visible',
+          maxHeight: topN === 'all' ? 480 : 'none',
+        }}>
+          <ResponsiveContainer width="100%" height={Math.max(200, lpChartData.length * 28 + 40)}>
+            <BarChart
+              data={lpChartData}
+              layout="vertical"
+              margin={{ top: 0, right: 24, bottom: 0, left: 8 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" horizontal={false} />
+              <XAxis
+                type="number"
+                tick={{ fontSize: 11, fill: 'var(--muted)', fontFamily: 'DM Sans, sans-serif' }}
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+              />
+              <YAxis
+                type="category"
+                dataKey="lpName"
+                width={200}
+                tick={{ fontSize: 11, fill: 'var(--ink)', fontFamily: 'DM Sans, sans-serif' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip
+                contentStyle={{
+                  fontFamily: 'DM Sans, sans-serif',
+                  fontSize: 12,
+                  borderRadius: 8,
+                  border: '1px solid var(--rule)',
+                }}
+                cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+              />
+              <Bar
+                dataKey="count"
+                fill={INTERACTION_COLORS.email_sent}
+                name="Interactions"
+                radius={[0, 3, 3, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Activity chart */}
