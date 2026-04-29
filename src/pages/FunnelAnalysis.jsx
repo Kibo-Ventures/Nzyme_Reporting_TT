@@ -11,6 +11,7 @@ import {
   useStageTimeInvestment,
   useLostDiscardedDeals,
   useLostDiscardedHistory,
+  useAllStageDaysHistory,
   useCurrentPortfolioCount,
   usePortfolioDeals,
   usePortfolioStageHistory,
@@ -274,7 +275,9 @@ export default function FunnelAnalysis() {
   const { data: throughputRaw = [] } = usePipelineThroughput(filters)
   const { data: ldDeals = [] } = useLostDiscardedDeals(filters)
   const ldDealNames = useMemo(() => ldDeals.map(d => d.name).filter(Boolean), [ldDeals])
+  const ldDealNamesSet = useMemo(() => new Set(ldDealNames), [ldDealNames])
   const { data: ldHistory = [] } = useLostDiscardedHistory(ldDealNames)
+  const { data: allStageDays = [] } = useAllStageDaysHistory()
 
   const { data: portfolioDeals = [] } = usePortfolioDeals()
   const portfolioDealNames = useMemo(() => portfolioDeals.map(d => d.name).filter(Boolean), [portfolioDeals])
@@ -479,36 +482,58 @@ export default function FunnelAnalysis() {
     }).filter(d => d.total > 0)
   }, [ldDeals, dealFurthestStage])
 
-  // ── Avg days in stage table (respects ldFilter) ───────────────────────────
+  // ── "Dropped here" table — per stage: deals whose last active stage was this one ──
+  // Columns: # dropped, their median days in that stage, delta vs deals that advanced.
   const avgDaysTableData = useMemo(() => {
     const lostDeals      = ldDeals.filter(d => d.stage === 'Lost')
     const discardedDeals = ldDeals.filter(d => d.stage === 'Discarded')
 
-    const relevantNames = new Set(
-      ldFilter === 'lost'      ? lostDeals.map(d => d.name)
-      : ldFilter === 'discarded' ? discardedDeals.map(d => d.name)
-      : ldDeals.map(d => d.name)
-    )
+    const relevantDeals =
+      ldFilter === 'lost'      ? lostDeals
+      : ldFilter === 'discarded' ? discardedDeals
+      : ldDeals
 
-    const stageMap = {}
-    const TERMINAL = new Set(['Lost', 'Discarded'])
-    ldHistory
-      .filter(h => relevantNames.has(h.deal_name) && !TERMINAL.has(h.stage_value))
-      .forEach(h => {
-        if (!stageMap[h.stage_value]) stageMap[h.stage_value] = { values: [], deals: new Set() }
-        stageMap[h.stage_value].values.push(h.days_in_stage)
-        stageMap[h.stage_value].deals.add(h.deal_name)
-      })
+    // Build a lookup: deal_name → { stage_value → days_in_stage } from ldHistory
+    const ldDaysByDealStage = {}
+    ldHistory.forEach(h => {
+      if (!ldDaysByDealStage[h.deal_name]) ldDaysByDealStage[h.deal_name] = {}
+      ldDaysByDealStage[h.deal_name][h.stage_value] = h.days_in_stage
+    })
+
+    // Build per-stage days for "advanced" deals (non-L/D deals in allStageDays)
+    const advancedDaysByStage = {}
+    allStageDays.forEach(h => {
+      if (ldDealNamesSet.has(h.deal_name)) return
+      if (!advancedDaysByStage[h.stage_value]) advancedDaysByStage[h.stage_value] = []
+      advancedDaysByStage[h.stage_value].push(h.days_in_stage)
+    })
 
     return STAGE_ORDER
-      .filter(s => stageMap[s])
-      .map(s => ({
-        stage:      s,
-        shortName:  STAGE_SHORT[s] ?? s,
-        medianDays: median(stageMap[s].values),
-        dealCount:  stageMap[s].deals.size,
-      }))
-  }, [ldDeals, ldHistory, ldFilter])
+      .map(stageVal => {
+        const droppedHere = relevantDeals.filter(d => dealFurthestStage[d.name] === stageVal)
+        if (droppedHere.length === 0) return null
+
+        const droppedDays = droppedHere
+          .map(d => ldDaysByDealStage[d.name]?.[stageVal])
+          .filter(v => v != null && v >= 0)
+
+        const droppedMedian  = median(droppedDays)
+        const advancedMedian = median(advancedDaysByStage[stageVal] ?? [])
+        const delta = droppedMedian != null && advancedMedian != null
+          ? droppedMedian - advancedMedian
+          : null
+
+        return {
+          stage:          stageVal,
+          shortName:      STAGE_SHORT[stageVal] ?? stageVal,
+          dealCount:      droppedHere.length,
+          medianDays:     droppedMedian,
+          advancedMedian,
+          delta,
+        }
+      })
+      .filter(Boolean)
+  }, [ldDeals, ldHistory, allStageDays, ldDealNamesSet, dealFurthestStage, ldFilter])
 
   if (isLoading) {
     return (
@@ -1048,60 +1073,76 @@ export default function FunnelAnalysis() {
               )}
             </div>
             <div className="text-xs" style={{ color: 'var(--muted)' }}>
-              Median time deals that eventually exited the pipeline spent in each stage
+              Deals whose last active stage was this one — how long they spent there vs deals that advanced
             </div>
           </div>
           <div style={{ overflowX: 'auto', border: '1px solid var(--rule)', borderRadius: 8 }}>
             <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f5f7fa' }}>
-                  {['Stage', 'Median Days in Stage', '# Deals'].map((h, i) => (
+                  {[
+                    { label: 'Stage',           align: 'left'  },
+                    { label: '# Dropped Here',  align: 'right' },
+                    { label: 'Median Days',      align: 'right' },
+                    { label: 'vs Advanced',      align: 'right' },
+                  ].map(h => (
                     <th
-                      key={h}
+                      key={h.label}
                       className="px-3 py-2 text-xs font-semibold uppercase tracking-wide"
                       style={{
-                        color:       'var(--muted)',
+                        color:        'var(--muted)',
                         borderBottom: '2px solid var(--rule)',
-                        textAlign:   i === 0 ? 'left' : 'right',
-                        whiteSpace:  'nowrap',
+                        textAlign:    h.align,
+                        whiteSpace:   'nowrap',
                       }}
                     >
-                      {h}
+                      {h.label}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {avgDaysTableData.map((row, i) => (
-                  <tr
-                    key={row.stage}
-                    style={{
-                      borderBottom: '1px solid var(--rule)',
-                      background:   i % 2 === 0 ? 'white' : '#f5f7fa',
-                    }}
-                  >
-                    <td className="px-3 py-2" style={{ color: 'var(--ink)', whiteSpace: 'nowrap' }}>
-                      <span
-                        style={{
-                          display:      'inline-block',
-                          width:        8,
-                          height:       8,
-                          borderRadius: '50%',
-                          background:   STAGE_COLOR_MAP[row.stage] ?? '#9ca3af',
-                          marginRight:  8,
-                          flexShrink:   0,
-                        }}
-                      />
-                      {row.shortName}
-                    </td>
-                    <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--ink)' }}>
-                      {row.medianDays != null ? `${row.medianDays}d` : '—'}
-                    </td>
-                    <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--muted)' }}>
-                      {row.dealCount}
-                    </td>
-                  </tr>
-                ))}
+                {avgDaysTableData.map((row, i) => {
+                  const deltaColor = row.delta == null
+                    ? 'var(--muted)'
+                    : row.delta > 0 ? '#c0392b' : '#2d6a4a'
+                  const deltaLabel = row.delta == null
+                    ? '—'
+                    : `${row.delta > 0 ? '+' : ''}${row.delta}d vs ${row.advancedMedian}d`
+                  return (
+                    <tr
+                      key={row.stage}
+                      style={{
+                        borderBottom: '1px solid var(--rule)',
+                        background:   i % 2 === 0 ? 'white' : '#f5f7fa',
+                      }}
+                    >
+                      <td className="px-3 py-2" style={{ color: 'var(--ink)', whiteSpace: 'nowrap' }}>
+                        <span
+                          style={{
+                            display:      'inline-block',
+                            width:        8,
+                            height:       8,
+                            borderRadius: '50%',
+                            background:   STAGE_COLOR_MAP[row.stage] ?? '#9ca3af',
+                            marginRight:  8,
+                            flexShrink:   0,
+                          }}
+                        />
+                        {row.shortName}
+                      </td>
+                      <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--muted)' }}>
+                        {row.dealCount}
+                      </td>
+                      <td className="px-3 py-2 font-mono" style={{ textAlign: 'right', color: 'var(--ink)', fontWeight: 600 }}>
+                        {row.medianDays != null ? `${row.medianDays}d` : '—'}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs" style={{ textAlign: 'right', color: deltaColor }}>
+                        {deltaLabel}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

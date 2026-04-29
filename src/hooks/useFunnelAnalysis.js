@@ -173,6 +173,22 @@ export function useCurrentPortfolioCount() {
   })
 }
 
+// All stage history rows (days_in_stage) — used to compute "advanced" median for comparison.
+export function useAllStageDaysHistory() {
+  return useQuery({
+    queryKey: ['all-stage-days-history'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ReportingNz_deal_stage_history')
+        .select('deal_name, stage_value, days_in_stage')
+        .not('days_in_stage', 'is', null)
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 10 * 60 * 1000,
+  })
+}
+
 // Active portfolio companies with their sourcing date — used to compute median days to portfolio.
 export function usePortfolioDeals() {
   return useQuery({
