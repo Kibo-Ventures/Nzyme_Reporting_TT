@@ -342,19 +342,28 @@ export default function FunnelAnalysis() {
   // Active dataset: filtered when both filterType + filterValue set, else DB view
   const activeStages = filteredStages ?? stages
 
-  // ── Median days to portfolio — computed from actual active portco stage histories ──
-  // Sums pre-portfolio stage days per portco, then takes the median across portcos.
+  // ── Median days to portfolio — calendar days from date_added to Portfolio stage entry ──
+  // For each active portco: find the earliest changed_at where stage = Portfolio,
+  // subtract date_added, then take the median across portcos.
   const portcoMedianDays = useMemo(() => {
-    if (!portfolioHistory.length) return null
-    const byDeal = {}
-    portfolioHistory
-      .filter(h => h.stage_value !== 'Portfolio')
-      .forEach(h => {
-        byDeal[h.deal_name] = (byDeal[h.deal_name] || 0) + (h.days_in_stage || 0)
+    if (!portfolioDeals.length || !portfolioHistory.length) return null
+    // Build a map of deal → earliest Portfolio entry date
+    const portfolioEntryDate = {}
+    portfolioHistory.forEach(h => {
+      if (!portfolioEntryDate[h.deal_name] || h.changed_at < portfolioEntryDate[h.deal_name]) {
+        portfolioEntryDate[h.deal_name] = h.changed_at
+      }
+    })
+    const days = portfolioDeals
+      .filter(d => d.date_added && portfolioEntryDate[d.name])
+      .map(d => {
+        const added    = new Date(d.date_added)
+        const invested = new Date(portfolioEntryDate[d.name])
+        return Math.round((invested - added) / (1000 * 60 * 60 * 24))
       })
-    const totals = Object.values(byDeal).filter(v => v > 0)
-    return median(totals)
-  }, [portfolioHistory])
+      .filter(d => d > 0)
+    return median(days)
+  }, [portfolioDeals, portfolioHistory])
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   // Entry → Portfolio and Median Days are always all-time metrics regardless of date filter:

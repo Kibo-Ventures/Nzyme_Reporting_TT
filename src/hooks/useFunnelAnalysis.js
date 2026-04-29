@@ -171,14 +171,14 @@ export function useCurrentPortfolioCount() {
   })
 }
 
-// Names of currently active portfolio companies — used to compute median days to portfolio.
+// Active portfolio companies with their sourcing date — used to compute median days to portfolio.
 export function usePortfolioDeals() {
   return useQuery({
     queryKey: ['portfolio-deals'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ReportingNz_deals')
-        .select('name')
+        .select('name, date_added')
         .eq('stage', 'Portfolio')
         .eq('is_active', true)
       if (error) throw error
@@ -188,16 +188,18 @@ export function usePortfolioDeals() {
   })
 }
 
-// Stage history for a given set of deals — used to sum pre-portfolio days per portco.
+// The date each portco first entered Portfolio stage — used with date_added to compute
+// calendar days from sourcing to investment.
 export function usePortfolioStageHistory(dealNames) {
   return useQuery({
     queryKey: ['portfolio-stage-history', dealNames?.length ?? 0],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ReportingNz_deal_stage_history')
-        .select('deal_name, stage_value, days_in_stage')
+        .select('deal_name, changed_at')
         .in('deal_name', dealNames)
-        .not('days_in_stage', 'is', null)
+        .eq('stage_value', 'Portfolio')
+        .not('changed_at', 'is', null)
       if (error) throw error
       return data || []
     },
