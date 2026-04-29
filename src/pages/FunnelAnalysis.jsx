@@ -12,6 +12,8 @@ import {
   useLostDiscardedDeals,
   useLostDiscardedHistory,
   useCurrentPortfolioCount,
+  usePortfolioDeals,
+  usePortfolioStageHistory,
   usePipelineThroughput,
 } from '../hooks/useFunnelAnalysis'
 import { useFilters } from '../hooks/useFilters'
@@ -274,6 +276,10 @@ export default function FunnelAnalysis() {
   const ldDealNames = useMemo(() => ldDeals.map(d => d.name).filter(Boolean), [ldDeals])
   const { data: ldHistory = [] } = useLostDiscardedHistory(ldDealNames)
 
+  const { data: portfolioDeals = [] } = usePortfolioDeals()
+  const portfolioDealNames = useMemo(() => portfolioDeals.map(d => d.name).filter(Boolean), [portfolioDeals])
+  const { data: portfolioHistory = [] } = usePortfolioStageHistory(portfolioDealNames)
+
   // Reset filterValue when filterType changes
   function handleFilterType(type) {
     setFilterType(type)
@@ -314,10 +320,14 @@ export default function FunnelAnalysis() {
     if (filterType === 'advisers')
       deals = adviserRaw.filter(d => d.attributed_adviser === filterValue)
 
-    const total = deals.length
+    // Only count deals with a recognized funnel stage — unrecognized stages (e.g. "Add-ons")
+    // have STAGE_ORDER.indexOf = -1 which would otherwise inflate the denominator and
+    // suppress all conversion %s (including the top row which should always be 100%).
+    const recognized = deals.filter(d => STAGE_ORDER.includes(d.stage))
+    const total = recognized.length
     return STAGE_ORDER.map((stageVal, idx) => {
-      const reached = deals.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx).length
-      const prevReached = idx === 0 ? null : deals.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx - 1).length
+      const reached = recognized.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx).length
+      const prevReached = idx === 0 ? null : recognized.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx - 1).length
       return {
         stage_value: stageVal,
         stage_rank: idx + 1,
@@ -332,18 +342,33 @@ export default function FunnelAnalysis() {
   // Active dataset: filtered when both filterType + filterValue set, else DB view
   const activeStages = filteredStages ?? stages
 
+  // ── Median days to portfolio — computed from actual active portco stage histories ──
+  // Sums pre-portfolio stage days per portco, then takes the median across portcos.
+  const portcoMedianDays = useMemo(() => {
+    if (!portfolioHistory.length) return null
+    const byDeal = {}
+    portfolioHistory
+      .filter(h => h.stage_value !== 'Portfolio')
+      .forEach(h => {
+        byDeal[h.deal_name] = (byDeal[h.deal_name] || 0) + (h.days_in_stage || 0)
+      })
+    const totals = Object.values(byDeal).filter(v => v > 0)
+    return median(totals)
+  }, [portfolioHistory])
+
   // ── KPIs ──────────────────────────────────────────────────────────────────
+  // Entry → Portfolio and Median Days are always all-time metrics regardless of date filter:
+  //   • portfolioCount = is_active=true portfolio companies (correct numerator)
+  //   • stages[0].reached_stage = all-time total deals from the DB view (correct denominator)
+  //   • portcoMedianDays = median of per-portco total pre-portfolio days
+  // This avoids the date-filter artifacts where portcos sourced before the window are invisible.
   const kpis = useMemo(() => {
     if (!activeStages.length) return {}
-    const entry     = activeStages[0]?.reached_stage ?? 0
-    const portfolio = activeStages.find((s) => s.stage_value === 'Portfolio')?.reached_stage ?? 0
-    const convRate  = entry > 0 ? Math.round((portfolio / entry) * 100) : 0
-    // avgDays only from DB view (not available when filtered)
-    const avgDays = filteredStages
-      ? null
-      : stages.filter(s => s.stage_value !== 'Portfolio').reduce((sum, s) => sum + (s.median_days_in_stage ?? 0), 0)
-    return { entry, portfolio, convRate, avgDays: avgDays != null ? Math.round(avgDays) : null }
-  }, [activeStages, filteredStages, stages])
+    const entry = activeStages[0]?.reached_stage ?? 0
+    const allTimeTotal = stages[0]?.reached_stage ?? 0
+    const convRate = allTimeTotal > 0 ? Math.round((portfolioCount / allTimeTotal) * 100) : 0
+    return { entry, convRate, avgDays: portcoMedianDays }
+  }, [activeStages, stages, portfolioCount, portcoMedianDays])
 
   // ── Horizontal bar chart data ─────────────────────────────────────────────
   const barData = useMemo(
@@ -527,12 +552,12 @@ export default function FunnelAnalysis() {
         <KpiCard
           title="Entry → Portfolio"
           value={kpis.convRate != null ? `${kpis.convRate}%` : '—'}
-          subtitle="overall conversion rate"
+          subtitle="all-time: active portcos ÷ total deals ever seen"
         />
         <KpiCard
           title="Median Days to Portfolio"
-          value={kpis.avgDays ?? '—'}
-          subtitle="sum of median time across pre-portfolio stages"
+          value={kpis.avgDays != null ? `${kpis.avgDays}d` : '—'}
+          subtitle="median total pre-investment days across active portcos"
         />
       </div>
 
