@@ -68,16 +68,18 @@ export function useStageTimeInvestment() {
   })
 }
 
-// Deals that were Lost or Discarded — identified by their stage value in Affinity.
-// The Workload field is set to 'Lost' or 'Discarded' directly in the CRM.
-export function useLostDiscardedDeals() {
+// Deals that were Lost or Discarded — date-filterable by date_added.
+export function useLostDiscardedDeals(filters = {}) {
+  const { dateRange, dateFrom, dateTo } = filters
   return useQuery({
-    queryKey: ['lost-discarded-deals'],
+    queryKey: ['lost-discarded-deals', dateRange, dateFrom, dateTo],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('ReportingNz_deals')
         .select('name, stage')
         .in('stage', ['Lost', 'Discarded'])
+      query = applyDateRange(query, filters)
+      const { data, error } = await query
       if (error) throw error
       return data || []
     },

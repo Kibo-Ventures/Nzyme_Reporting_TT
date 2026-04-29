@@ -78,7 +78,7 @@ function median(values) {
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
   return sorted.length % 2 !== 0
-    ? sorted[mid]
+    ? Math.round(sorted[mid])
     : Math.round((sorted[mid - 1] + sorted[mid]) / 2)
 }
 
@@ -272,7 +272,7 @@ export default function FunnelAnalysis() {
   const { data: allDeals = [] } = useFunnelDeals(filters)
   const { data: timeInvestmentRaw = [] } = useStageTimeInvestment()
   const { data: throughputRaw = [] } = usePipelineThroughput(filters)
-  const { data: ldDeals = [] } = useLostDiscardedDeals()
+  const { data: ldDeals = [] } = useLostDiscardedDeals(filters)
   const ldDealNames = useMemo(() => ldDeals.map(d => d.name).filter(Boolean), [ldDeals])
   const { data: ldHistory = [] } = useLostDiscardedHistory(ldDealNames)
 
