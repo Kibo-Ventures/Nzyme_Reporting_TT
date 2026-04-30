@@ -342,8 +342,17 @@ export default function FunnelAnalysis() {
     }).filter(s => s.reached_stage > 0)
   }, [filterType, filterValue, isDateFiltered, allDeals, adviserRaw])
 
-  // Active dataset: filtered when both filterType + filterValue set, else DB view
-  const activeStages = filteredStages ?? stages
+  // Active dataset: filtered when both filterType + filterValue set, else DB view.
+  // When using the DB view, override Portfolio's reached_stage with the is_active=true
+  // count so the bar matches the KPI card (2 inactive portcos were inflating it to 6).
+  const activeStages = useMemo(() => {
+    if (filteredStages !== null) return filteredStages
+    return stages.map(s =>
+      s.stage_value === 'Portfolio'
+        ? { ...s, reached_stage: portfolioCount }
+        : s
+    )
+  }, [filteredStages, stages, portfolioCount])
 
   // ── Median days to portfolio — calendar days from date_added to Portfolio stage entry ──
   // For each active portco: find the earliest changed_at where stage = Portfolio,
