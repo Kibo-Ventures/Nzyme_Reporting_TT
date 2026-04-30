@@ -63,8 +63,8 @@ function EntryRow({ label, type, categoryKey, entries, onChange }) {
       </div>
       <input
         type="number"
-        value={pct}
-        onChange={e => onChange(categoryKey, 'pct', e.target.value)}
+        value={pctActual}
+        onChange={e => onChange(categoryKey, 'pct_actual', e.target.value)}
         placeholder="0"
         min="0"
         max="100"
@@ -73,8 +73,8 @@ function EntryRow({ label, type, categoryKey, entries, onChange }) {
       />
       <input
         type="number"
-        value={pctActual}
-        onChange={e => onChange(categoryKey, 'pct_actual', e.target.value)}
+        value={pct}
+        onChange={e => onChange(categoryKey, 'pct', e.target.value)}
         placeholder="0"
         min="0"
         max="100"
@@ -191,8 +191,8 @@ function SectionHeader({ label, count, collapsible, open, onToggle, tooltip }) {
   )
 }
 
-const WEEK_OFFSET_MIN = -8  // how far back users can go (8 weeks)
-const WEEK_OFFSET_MAX = 1   // how far forward (1 week, for planning ahead)
+const WEEK_OFFSET_MIN = -8
+const WEEK_OFFSET_MAX = 1
 
 export default function WeeklyForm({ userEmail, onSubmitted }) {
   const [weekOffset, setWeekOffset] = useState(() => new Date().getDay() === 1 ? -1 : 0)
@@ -202,7 +202,6 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
   const { isLoading, error: dataError, dealflow, addons, longtail, portfolio, origChannels, teamMembers } = useTrackerData()
   const { data: internalCategories = [], isLoading: internalLoading } = useInternalCategories()
 
-  // Resolve the logged-in user's team member name from their email
   const selectedUser = teamMembers.find(
     m => m.email?.toLowerCase() === userEmail?.toLowerCase()
   )?.name ?? ''
@@ -217,7 +216,6 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
   const [pendingRows, setPendingRows] = useState(null)
   const [showIntensityModal, setShowIntensityModal] = useState(false)
 
-  // Reset entries when week changes
   const prevWeek = useRef(weekStart)
   useEffect(() => {
     if (prevWeek.current !== weekStart) {
@@ -226,7 +224,6 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
     }
   }, [weekStart])
 
-  // Populate entries from existing DB data (merged from two week_starts)
   useEffect(() => {
     if (!userEntriesQ.isSuccess || !userEntriesQ.data) return
     const filled = {}
@@ -250,7 +247,6 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
     }))
   }
 
-  // Computed totals
   const allVals = Object.values(entries)
   const totalPctExpected = allVals.reduce((s, e) => s + (parseFloat(e.pct) || 0), 0)
   const totalPctActual = allVals.reduce((s, e) => s + (parseFloat(e.pct_actual) || 0), 0)
@@ -260,8 +256,8 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
     if (!selectedUser) return
     setSubmitError(null)
 
-    const actualRows   = []  // pct_actual → week_start = weekStart
-    const expectedRows = []  // pct_expected → week_start = weekStartNext
+    const actualRows   = []
+    const expectedRows = []
 
     function addRows(items, type) {
       for (const item of items) {
@@ -308,7 +304,6 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
     setShowIntensityModal(true)
   }
 
-  // Week labels
   const thisWeekShort = new Date(weekStart     + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const nextWeekShort = new Date(weekStartNext + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const weekLabel = new Date(weekStart + 'T12:00:00').toLocaleDateString('en-GB', {
@@ -346,7 +341,6 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
         <h1 style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: '1.75rem', marginBottom: '0.5rem' }}>
           Weekly Time Log
         </h1>
-        {/* Week navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={() => setWeekOffset(o => o - 1)}
@@ -425,7 +419,7 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
         </div>
       </div>
 
-      {/* Team member — auto-resolved from logged-in account */}
+      {/* Team member */}
       <div style={{ marginBottom: '1.5rem' }}>
         <label
           style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}
@@ -446,6 +440,50 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
             Your account ({userEmail}) is not linked to a team member yet. Ask an admin to add your email to the team members table.
           </p>
         )}
+      </div>
+
+      {/* Callout box */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 0,
+          marginBottom: '1rem',
+          border: '1px solid var(--rule)',
+          borderRadius: 8,
+          overflow: 'hidden',
+          fontSize: '0.8125rem',
+          lineHeight: 1.45,
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            padding: '10px 14px',
+            background: '#fdf8f2',
+            borderRight: '1px solid var(--rule)',
+          }}
+        >
+          <span style={{ fontWeight: 700, color: '#8a5020', display: 'block', marginBottom: 2 }}>
+            ← Actual % &nbsp;·&nbsp; last week
+          </span>
+          <span style={{ color: 'var(--muted)' }}>
+            What % of your week did you <em>actually</em> spend on each item? Should total 100%.
+          </span>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            padding: '10px 14px',
+            background: '#f4f9f6',
+          }}
+        >
+          <span style={{ fontWeight: 700, color: '#4a7a5a', display: 'block', marginBottom: 2 }}>
+            Expected % → &nbsp;·&nbsp; next week
+          </span>
+          <span style={{ color: 'var(--muted)' }}>
+            What % of your upcoming week do you <em>expect</em> to spend on each item?
+          </span>
+        </div>
       </div>
 
       {/* Column headers */}
@@ -469,12 +507,12 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
             textAlign: 'right',
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
-            color: '#4a7a5a',
+            color: '#8a5020',
             lineHeight: 1.3,
           }}
         >
-          Exp&nbsp;%<br />
-          <span style={{ fontWeight: 400, textTransform: 'none' }}>w/c {nextWeekShort}</span>
+          Actual&nbsp;%<br />
+          <span style={{ fontWeight: 400, textTransform: 'none' }}>w/c {thisWeekShort}</span>
         </div>
         <div
           style={{
@@ -484,12 +522,12 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
             textAlign: 'right',
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
-            color: '#8a5020',
+            color: '#4a7a5a',
             lineHeight: 1.3,
           }}
         >
-          Actual&nbsp;%<br />
-          <span style={{ fontWeight: 400, textTransform: 'none' }}>w/c {thisWeekShort}</span>
+          Exp&nbsp;%<br />
+          <span style={{ fontWeight: 400, textTransform: 'none' }}>w/c {nextWeekShort}</span>
         </div>
       </div>
 
@@ -673,23 +711,6 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
           gap: 16,
         }}
       >
-        {/* Expected % total */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, minWidth: 100 }}>
-          <span style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Total Exp %
-          </span>
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '1.25rem',
-              fontWeight: 600,
-              color: totalPctExpected === 100 ? 'var(--accent)' : 'var(--ink)',
-            }}
-          >
-            {totalPctExpected.toFixed(totalPctExpected % 1 === 0 ? 0 : 1)}%
-          </span>
-        </div>
-
         {/* Actual % total */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, minWidth: 100 }}>
           <span style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -715,6 +736,23 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
               aim for 100%
             </span>
           )}
+        </div>
+
+        {/* Expected % total */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, minWidth: 100 }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Total Exp %
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '1.25rem',
+              fontWeight: 600,
+              color: totalPctExpected === 100 ? 'var(--accent)' : 'var(--ink)',
+            }}
+          >
+            {totalPctExpected.toFixed(totalPctExpected % 1 === 0 ? 0 : 1)}%
+          </span>
         </div>
 
         <div style={{ flex: 1 }} />
