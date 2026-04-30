@@ -29,6 +29,7 @@ export function useStageHistogram(stageValue) {
         .select('days_in_stage')
         .eq('stage_value', stageValue)
         .not('days_in_stage', 'is', null)
+        .limit(5000)
       if (error) throw error
       return (data || []).map((r) => r.days_in_stage)
     },
@@ -134,6 +135,7 @@ export function usePipelineThroughput(filters = {}) {
       let query = supabase
         .from('ReportingNz_deal_stage_history')
         .select('stage_value, deal_name, changed_at')
+        .limit(5000)
 
       if (dateRange === 'ltm') {
         const d = new Date()
@@ -182,6 +184,7 @@ export function useAllStageDaysHistory() {
         .from('ReportingNz_deal_stage_history')
         .select('deal_name, stage_value, days_in_stage')
         .not('days_in_stage', 'is', null)
+        .limit(5000)
       if (error) throw error
       return data || []
     },
