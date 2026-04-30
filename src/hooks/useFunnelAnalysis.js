@@ -135,6 +135,7 @@ export function usePipelineThroughput(filters = {}) {
       let query = supabase
         .from('ReportingNz_deal_stage_history')
         .select('stage_value, deal_name, changed_at')
+        .order('changed_at', { ascending: false })
         .limit(5000)
 
       if (dateRange === 'ltm') {
