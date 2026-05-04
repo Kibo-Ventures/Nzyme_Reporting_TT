@@ -8,6 +8,7 @@ import {
   useStageHistogram,
   useAdviserStageBreakdown,
   useFunnelDeals,
+  useFunnelDealsHistory,
   useStageTimeInvestment,
   useLostDiscardedDeals,
   useLostDiscardedHistory,
@@ -271,6 +272,17 @@ export default function FunnelAnalysis() {
   const { data: adviserRaw = [] } = useAdviserStageBreakdown()
   // Pass the actual filter values object (not the whole context wrapper)
   const { data: allDeals = [] } = useFunnelDeals(filters)
+
+  // Fetch stage history for deals in the current period so the date-filtered funnel
+  // uses "furthest stage ever reached" (matching the all-time SQL view) rather than
+  // current stage. Not needed for adviser filter (no deal names) or pure all-time mode.
+  const dealHistoryNames = useMemo(() => {
+    if (filterType === 'advisers') return []
+    if (!isDateFiltered && !filterType && !filterValue) return []
+    return allDeals.map(d => d.name).filter(Boolean)
+  }, [filterType, filterValue, isDateFiltered, allDeals])
+  const { data: dealHistory = [] } = useFunnelDealsHistory(dealHistoryNames)
+
   const { data: timeInvestmentRaw = [] } = useStageTimeInvestment()
   const { data: throughputRaw = [] } = usePipelineThroughput(filters)
   const { data: ldDeals = [] } = useLostDiscardedDeals(filters)
@@ -311,7 +323,9 @@ export default function FunnelAnalysis() {
 
   // ── Filtered funnel computation ────────────────────────────────────────────
   // Triggers when date is filtered OR a captain/channel/adviser filter is active.
-  // When date-filtered, allDeals is already scoped to the date range by the hook.
+  // For date/captain/channel filters: mirrors the all-time SQL view by using stage
+  // history to find the furthest stage each deal ever reached, not just current stage.
+  // For adviser filter: no deal names available, falls back to current-stage approach.
   const filteredStages = useMemo(() => {
     if (!filterType && !filterValue && !isDateFiltered) return null
 
@@ -323,16 +337,42 @@ export default function FunnelAnalysis() {
     if (filterType === 'advisers')
       deals = adviserRaw.filter(d => d.attributed_adviser === filterValue)
 
-    // Only count deals with a recognized funnel stage — unrecognized stages (e.g. "Add-ons")
-    // have STAGE_ORDER.indexOf = -1 which would otherwise inflate the denominator and
-    // suppress all conversion %s (including the top row which should always be 100%).
-    // total = all deals in the period, including lost/discarded/add-ons —
-    // they entered the funnel even if they're no longer in an active stage.
-    const recognized = deals.filter(d => STAGE_ORDER.includes(d.stage))
     const total = deals.length
-    const reachedByIdx = STAGE_ORDER.map((_, idx) =>
-      idx === 0 ? total : recognized.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx).length
-    )
+    let reachedByIdx
+
+    if (filterType === 'advisers') {
+      // adviserRaw has no deal names — use current stage as proxy
+      const recognized = deals.filter(d => STAGE_ORDER.includes(d.stage))
+      reachedByIdx = STAGE_ORDER.map((_, idx) =>
+        idx === 0 ? total : recognized.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx).length
+      )
+    } else {
+      // Use stage history to find the furthest stage each deal ever reached,
+      // matching the all-time SQL view's "reached_stage" semantics exactly.
+      const dealNameSet = new Set(deals.map(d => d.name))
+      const furthestRankByDeal = {}
+
+      // Seed with current stage as fallback for deals with no history rows
+      deals.forEach(d => {
+        furthestRankByDeal[d.name] = STAGE_ORDER.indexOf(d.stage) // -1 for lost/discarded
+      })
+
+      // Override with max rank found in history (a deal may have passed through higher stages)
+      dealHistory.forEach(h => {
+        if (!dealNameSet.has(h.deal_name)) return
+        const rank = STAGE_ORDER.indexOf(h.stage_value)
+        if (rank === -1) return
+        if (rank > (furthestRankByDeal[h.deal_name] ?? -1))
+          furthestRankByDeal[h.deal_name] = rank
+      })
+
+      reachedByIdx = STAGE_ORDER.map((_, idx) =>
+        idx === 0
+          ? total
+          : Object.values(furthestRankByDeal).filter(rank => rank >= idx).length
+      )
+    }
+
     return STAGE_ORDER.map((stageVal, idx) => {
       const reached     = reachedByIdx[idx]
       const prevReached = idx === 0 ? null : reachedByIdx[idx - 1]
@@ -345,7 +385,7 @@ export default function FunnelAnalysis() {
         stage_to_stage_pct: prevReached > 0 ? Math.round((reached / prevReached) * 100) : null,
       }
     }).filter(s => s.reached_stage > 0)
-  }, [filterType, filterValue, isDateFiltered, allDeals, adviserRaw])
+  }, [filterType, filterValue, isDateFiltered, allDeals, adviserRaw, dealHistory])
 
   // Active dataset: filtered when both filterType + filterValue set, else DB view.
   // When using the DB view, override Portfolio's reached_stage with the is_active=true

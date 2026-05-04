@@ -106,6 +106,25 @@ export function useLostDiscardedHistory(dealNames) {
   })
 }
 
+// Stage history rows for a given set of deal names — used to find the furthest
+// stage each deal ever reached, so date-filtered funnel bars match the all-time view.
+export function useFunnelDealsHistory(dealNames) {
+  return useQuery({
+    queryKey: ['funnel-deals-history', dealNames],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ReportingNz_deal_stage_history')
+        .select('deal_name, stage_value')
+        .in('deal_name', dealNames)
+        .limit(5000)
+      if (error) throw error
+      return data || []
+    },
+    enabled: Array.isArray(dealNames) && dealNames.length > 0,
+    staleTime: 10 * 60 * 1000,
+  })
+}
+
 // Raw deals for funnel computation — date-filterable.
 export function useFunnelDeals(filters = {}) {
   const { dateRange, dateFrom, dateTo } = filters
