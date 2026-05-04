@@ -326,11 +326,16 @@ export default function FunnelAnalysis() {
     // Only count deals with a recognized funnel stage — unrecognized stages (e.g. "Add-ons")
     // have STAGE_ORDER.indexOf = -1 which would otherwise inflate the denominator and
     // suppress all conversion %s (including the top row which should always be 100%).
+    // total = all deals in the period, including lost/discarded/add-ons —
+    // they entered the funnel even if they're no longer in an active stage.
     const recognized = deals.filter(d => STAGE_ORDER.includes(d.stage))
-    const total = recognized.length
+    const total = deals.length
+    const reachedByIdx = STAGE_ORDER.map((_, idx) =>
+      idx === 0 ? total : recognized.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx).length
+    )
     return STAGE_ORDER.map((stageVal, idx) => {
-      const reached = recognized.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx).length
-      const prevReached = idx === 0 ? null : recognized.filter(d => STAGE_ORDER.indexOf(d.stage) >= idx - 1).length
+      const reached     = reachedByIdx[idx]
+      const prevReached = idx === 0 ? null : reachedByIdx[idx - 1]
       return {
         stage_value: stageVal,
         stage_rank: idx + 1,
