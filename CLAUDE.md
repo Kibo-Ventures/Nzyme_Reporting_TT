@@ -1,8 +1,14 @@
 # Nzyme Reporting — Dashboard Reference
 
-Internal BI dashboard for a PE fund. Two functional areas: a **Time Tracker** for weekly allocation logging, and **7 Reporting Dashboards** for deal pipeline, team analytics, channel performance, adviser coverage, funnel analysis, proprietary dealflow, and dynamic analysis.
+Internal BI dashboard for a PE fund. Two functional areas: a **Time Tracker** for weekly allocation logging, and **8 Reporting Dashboards** for deal pipeline, team analytics, channel performance, adviser coverage, funnel analysis, proprietary dealflow, dynamic analysis, and fundraising activity.
 
 **Audience**: 5–8 PE fund team members. Desktop only (min 1024px). Hosted on Vercel, read-only from the frontend.
+
+---
+
+## Maintenance
+
+**Update this file on every deploy**: Before or as part of every `git push` to `main`, review what changed and update the relevant sections of this file. New pages, hooks, components, schema changes, and behaviour changes must all be reflected here. This file is the single source of truth for how the codebase works.
 
 ---
 
@@ -16,6 +22,7 @@ Internal BI dashboard for a PE fund. Two functional areas: a **Time Tracker** fo
 | Data fetching | Supabase JS v2 + TanStack React Query v5 |
 | Routing | React Router v7 |
 | Auth | Supabase Auth — Google OAuth, domain-restricted, session in localStorage |
+| Analytics | `@vercel/analytics` — `<Analytics />` mounted in `main.jsx`, tracks page views per route |
 | Hosting | Vercel (auto-deploy from GitHub `main`) |
 | Backend | Supabase (Postgres + Edge Functions, RLS-protected) |
 
@@ -26,7 +33,7 @@ Internal BI dashboard for a PE fund. Two functional areas: a **Time Tracker** fo
 ```
 src/
 ├── App.jsx                          ← Routes: /login, /auth/callback, ProtectedRoute wrapper + FilterProvider
-├── main.jsx                         ← QueryClient (5min stale, retry=1) + AuthProvider
+├── main.jsx                         ← QueryClient (5min stale, retry=1) + AuthProvider + <Analytics />
 ├── index.css                        ← CSS custom properties + global resets
 ├── contexts/
 │   └── AuthContext.jsx              ← AuthProvider, useAuth(), Google sign-in, domain check, sign-out
@@ -36,40 +43,50 @@ src/
 │   ├── TimeTracker.jsx              ← /timetracker (default)
 │   ├── TeamAnalytics.jsx            ← /team
 │   ├── BoardPipeline.jsx            ← /pipeline
-│   ├── ProprietaryDealflow.jsx      ← /proprietary
+│   ├── ProprietaryDealflow.jsx      ← /proprietary (disabled in sidebar, route still exists)
 │   ├── ChannelPerformance.jsx       ← /channels
 │   ├── AdviserCoverage.jsx          ← /advisers
 │   ├── FunnelAnalysis.jsx           ← /funnel
-│   └── DynamicAnalysis.jsx          ← /analysis
+│   ├── DynamicAnalysis.jsx          ← /analysis
+│   └── FundraisingActivity.jsx      ← /fundraising — LP/investor interaction tracking
 ├── components/
 │   ├── layout/
 │   │   ├── AppShell.jsx             ← Outlet + conditional FilterBar + AiChatPanel
-│   │   ├── Sidebar.jsx              ← Sticky nav (8 routes) + user email + sign-out button
+│   │   ├── Sidebar.jsx              ← Sticky nav (9 routes) + user email + sign-out button
 │   │   └── FilterBar.jsx            ← Date/captain/stage/channel + freshness
 │   ├── chat/
 │   │   └── AiChatPanel.jsx          ← Slide-in AI chat panel (all non-timetracker pages)
 │   ├── timetracker/
 │   │   ├── WeeklyForm.jsx           ← Main time-entry form (team member auto-resolved from auth email)
+│   │   ├── IntensityModal.jsx       ← Week-intensity picker (Light/Normal/Intense → ~40/55/70 hrs) shown on submit
 │   │   └── SuccessScreen.jsx        ← Post-submit confirmation
 │   ├── ProtectedRoute.jsx           ← Layout route guard — redirects to /login if not authenticated
-│   ├── TeamAccessGate.jsx           ← Staffing Report guard — checks team_access Supabase table
+│   ├── TeamAccessGate.jsx           ← Wraps /team and /fundraising — checks team_access Supabase table
+│   ├── TeamPasswordGate.jsx         ← Legacy password gate (VITE_TEAM_PASSWORD); no longer used in routing
 │   └── ui/
 │       ├── Badge.jsx                ← StageBadge + TierBadge
+│       ├── InfoTooltip.jsx          ← Hover tooltip (ⓘ icon, fixed-position bubble to escape overflow)
 │       ├── KpiCard.jsx              ← Metric card (title/value/subtitle)
 │       ├── LoadingSpinner.jsx       ← 8px spinning circle
-│       └── MultiSelect.jsx          ← Checkbox dropdown (N selected label)
+│       ├── MultiSelect.jsx          ← Checkbox dropdown (N selected label)
+│       └── PageBanner.jsx           ← Collapsible info banner (summary + expandable body + optional caveat)
 ├── hooks/
 │   ├── useFilters.jsx               ← FilterContext (dateRange, dealCaptain[], stage[], channel)
 │   ├── useAiChat.js                 ← sendMessage(), messages[], isLoading — calls ai-chat edge fn
 │   ├── useDeals.js                  ← useBoardPipelineDeals()
-│   ├── useTimeEntries.js            ← useTrackerData(), useUserEntries(), getMondayISO()
+│   ├── useTimeEntries.js            ← useTrackerData(), useUserEntriesMerged(), useInternalCategories(), getMondayISO(offsetWeeks?), addDays()
 │   ├── useFilterOptions.js          ← useDealCaptainOptions(), useStageOptions(), useChannelOptions(), useDataFreshness()
 │   ├── useTeamAnalytics.js          ← useDealStageMap(), useTimeframeEntries(), useLifetimeHoursEntries()
 │   ├── useAdviserDeals.js           ← useAdviserDeals()
 │   ├── useChannelPerformance.js     ← useChannelDeals(), useChannelCosts(), useChannelCostActuals(), useChannelOrigEntries()
 │   ├── useProprietaryDeals.js       ← useProprietaryDeals(), useTotalDealsCount()
 │   ├── useAnalysisDeals.js          ← useAnalysisDeals() — queries ReportingNz_deal_analysis view
-│   └── useFunnelAnalysis.js         ← useFunnelStages(), useStageHistogram(), useAdviserStageBreakdown(), useFunnelDeals(), useStageTimeInvestment()
+│   ├── useLPDashboard.js            ← useLPDashboard() — paginates ReportingNZ_LP_dashboard (all interaction rows)
+│   └── useFunnelAnalysis.js         ← useFunnelStages(), useFunnelDeals(), useFunnelDealsHistory(),
+│                                       useStageHistogram(), useAdviserStageBreakdown(), useStageTimeInvestment(),
+│                                       usePipelineThroughput(), useLostDiscardedDeals(), useLostDiscardedHistory(),
+│                                       useAllStageDaysHistory(), useCurrentPortfolioCount(),
+│                                       usePortfolioDeals(), usePortfolioStageHistory()
 └── lib/
     ├── config.js                    ← PROPRIETARY_DEAL_GOAL_ANNUAL = 36; proprietaryGoalForRange()
     ├── dateRange.js                 ← applyDateRange(query, filters) helper
@@ -111,7 +128,7 @@ Authentication is handled entirely in the React SPA via **Supabase Auth with Goo
 | `src/pages/LoginPage.jsx` | Login UI — Google button, domain error, signin error |
 | `src/pages/AuthCallback.jsx` | OAuth landing page — shows "Signing you in…", redirects once session resolves |
 | `src/components/ProtectedRoute.jsx` | React Router layout route — renders `<Outlet />` if authenticated, else redirects to `/login` |
-| `src/components/TeamAccessGate.jsx` | Wraps `/team` — checks `team_access` table for the user's email, shows access-denied if not found |
+| `src/components/TeamAccessGate.jsx` | Wraps `/team` and `/fundraising` — checks `team_access` table for the user's email, shows access-denied if not found |
 
 ### Allowed Domains
 
@@ -123,9 +140,9 @@ const ALLOWED_DOMAINS = ['kiboventures.com', 'nzalpha.com']
 
 To add `@nzyme.com` in future, append `'nzyme.com'` to this array.
 
-### Staffing Report Access (`/team`)
+### Restricted Pages (`/team`, `/fundraising`)
 
-Access to `/team` is restricted to a specific allowlist stored in the `team_access` Supabase table. Being able to log in (valid domain) does **not** automatically grant access to this page.
+Access is restricted to a specific allowlist stored in the `team_access` Supabase table. Being able to log in (valid domain) does **not** automatically grant access to these pages.
 
 **To grant access**: insert a row into `team_access` via the Supabase dashboard:
 ```sql
@@ -153,14 +170,14 @@ Current access: all 6 MDs (Fernando, Ignacio, Jose Manuel, Juan, Pablo, Vicente)
 - Applied server-side via `applyDateRange()` in `lib/dateRange.js`
 - `dealCaptain` uses multi-select + `ilike %name%` (handles compound names)
 - FilterBar hidden entirely on `/timetracker` and `/team`
-- Date range filter greyed out (disabled) on `/funnel` and `/pipeline` only
+- Date range filter greyed out (disabled) on `/pipeline` only
 - **Data freshness**: `MAX(last_synced_at)` from `ReportingNz_deals`, shown in FilterBar top-right
 
 ### FilterBar props
 
 | Prop | Default | Used on |
 |---|---|---|
-| `disableDateRange` | `false` | `/funnel`, `/pipeline` |
+| `disableDateRange` | `false` | `/pipeline` |
 | `hideChannel` | `false` | `/advisers` |
 
 ---
@@ -176,11 +193,12 @@ Current access: all 6 MDs (Fernando, Ignacio, Jose Manuel, Juan, Pablo, Vicente)
 | `ReportingNz_deals` | Primary deal table. Synced from Affinity CRM daily at 06:00 via `affinity-sync` edge fn |
 | `ReportingNz_advisers` | Adviser coverage DB (tier, firm_type, KAM, contacts, NDA status) |
 | `ReportingNz_deal_stage_history` | Stage transitions with `changed_at` / `exited_at` / `days_in_stage` (~1,700 rows) |
-| `ReportingNz_time_entries` | Weekly logs (`user_name`, `week_start`, `category_key`, `category_type`, `pct_expected`, `hrs_actual`); upserted on composite key |
+| `ReportingNz_time_entries` | Weekly logs (`user_name`, `week_start`, `category_key`, `category_type`, `pct_expected`, `hrs_actual`, `intensity`); upserted on composite key |
 | `ReportingNz_team_members` | Active team (`name`, `seniority`, `hourly_rate`, `seniority_multiplier`, `email`); `email` links each member to their Supabase Auth account |
 | `ReportingNz_orig_channels` | Origination channel reference (`name`, `sort_order`) |
 | `ReportingNz_channel_costs` | Manual cost inputs (`one_off_cost`, `difficulty`, `potential`) |
-| `team_access` | Staffing Report allowlist — one row per email address permitted to view `/team` |
+| `ReportingNZ_LP_dashboard` | LP/investor interaction log (`interaction_date`, `interaction_type`, `partner_names`, `lp_name`, `investor_type`, `engagement_effort`, `overall_status`, `portugal_status`, `germany_status`) |
+| `team_access` | Staffing Report + Fundraising allowlist — one row per email address permitted to view `/team` and `/fundraising` |
 
 #### `team_access` table
 
@@ -198,9 +216,9 @@ create table team_access (
 | View | Description |
 |---|---|
 | `ReportingNz_adviser_deals` | Pre-joined deal + adviser rows, includes `programme_bucket`, `is_ltm`, `lead_quality` |
-| `ReportingNz_funnel_analysis` | 6-row aggregated funnel stats (reached_stage, avg_days, conversion %) |
+| `ReportingNz_funnel_analysis` | 6-row aggregated funnel stats — uses `max(stage_rank)` from stage history to count deals that ever reached each stage (all-time, no date filter) |
 | `ReportingNz_channel_cost_actuals` | Time-based cost per channel (hrs × rate × multiplier) |
-| `ReportingNz_stage_time_investment` | Hours invested per deal × stage with `did_advance` flag |
+| `ReportingNz_stage_time_investment` | Hours per deal × stage; `did_advance = true` only when the deal's next stage (via `LEAD()` on `changed_at`) has a strictly higher rank — exiting to Lost/Discarded does NOT set `did_advance` |
 | `ReportingNz_deal_analysis` | Per-deal computed metrics for Dynamic Analysis page — see below |
 
 ### `ReportingNz_deal_analysis` view columns
@@ -269,7 +287,7 @@ All raw `stage` values from Affinity CRM:
 | `longtail` | Deals at `'Being explored'` stage + `'Other'` catch-all |
 | `orig` | Rows from `ReportingNz_orig_channels` |
 | `portco` | Deals at `'Portfolio'` stage |
-| `internal` | Hardcoded: Recruiting, Investor Relations / LP, Fund Operations, Expansion & Business Development, Training & development, Out of office |
+| `internal` | Hardcoded list returned by `useInternalCategories()` in `useTimeEntries.js` |
 
 ---
 
@@ -281,8 +299,9 @@ All raw `stage` values from Affinity CRM:
 - If the logged-in email has no matching row in `ReportingNz_team_members`, an error message is shown prompting an admin to add their email to the table.
 - Week selector (always current Monday, local timezone via `getMondayISO()`)
 - **6 category groups**: Dealflow (scrollable if >8 deals), Longtail, Origination, Portfolio, Internal, Time Off
-- Two input columns per row: `pct_expected` (next week %) + `hrs_actual` (last week hrs)
+- Two input columns per row: `pct_actual` (last week %) + `pct` (next week %)
 - Live % total with over-100% warning; running hrs total with "X hrs/day" hint
+- On submit: **IntensityModal** appears — user picks Light / Normal / Intense (~40 / 55 / 70 hrs). The `intensity` value is stored on every upserted row. After confirming, existing rows for both weeks are deleted then re-inserted.
 - Submits via upsert on `(user_name, week_start, category_key)`
 - FilterBar hidden on this page
 
@@ -300,7 +319,7 @@ All raw `stage` values from Affinity CRM:
 
 ---
 
-### Board View (`/pipeline`)
+### Dealflow & Portfolio Board (`/pipeline`)
 
 - Current-state snapshot; NOT date-filtered; always `is_active = true`
 - **Stage groups in order**: Portfolio → DD Phase → Working on a Deal → Under Analysis → Being Explored → Dormant
@@ -313,6 +332,8 @@ All raw `stage` values from Affinity CRM:
 ---
 
 ### Proprietary Dealflow (`/proprietary`)
+
+> Route exists but is disabled in the sidebar (commented out). Still accessible directly.
 
 - **Definition**: `origination_channel IS NULL` OR (not ilike `%Network%` AND not ilike `%Adviser%`)
 - **Goal**: Dynamic — `proprietaryGoalForRange(filters)` from `lib/config.js`
@@ -353,15 +374,17 @@ All raw `stage` values from Affinity CRM:
 
 ### Funnel Analysis (`/funnel`)
 
-- All-time data only; date filter greyed out in FilterBar
-- **Source**: `ReportingNz_funnel_analysis` view (6 rows, pre-aggregated)
+- Date filter is **active** (not greyed out). Defaults to `'all'` on mount via `useEffect` so the pre-aggregated view is the baseline, but LTM/YTD are fully supported.
+- **"All" mode**: reads from `ReportingNz_funnel_analysis` SQL view (pre-aggregated, uses stage history `max(stage_rank)` — counts deals that ever reached each stage)
+- **Date-filtered / captain / channel mode**: computes funnel client-side from `useFunnelDeals` + `useFunnelDealsHistory`. Uses stage history to find furthest stage each deal ever reached, mirroring the SQL view semantics. Entry count includes Lost/Discarded/Add-ons deals.
+- **Adviser filter mode**: client-side from `useAdviserStageBreakdown`; falls back to current-stage computation (no deal names available for history lookup)
 - **Horizontal bar**: cumulative "reached stage" per stage, filterable by Captain / Channel / Adviser
-- **Stats table**: Reached, Didn't Advance, Cumul. Conv. %, Stage-to-Stage %, Avg Days, Total Hrs, Avg Hrs to Progress
+- **Stats table**: Reached, Didn't Advance, Cumul. Conv. %, Stage-to-Stage %, Median Days, Total Hrs, Avg Hrs to Progress
 - Click stage row → expands time-in-stage histogram (buckets: 0–7d, 8–14d, 15–30d, 31–60d, 61–90d, 91–180d, 180d+)
-- **Time invested section**: hours per deal × stage from `ReportingNz_stage_time_investment`
-- **Median Days to Portfolio** KPI: sums `median_days_in_stage` across pre-portfolio stages only (Portfolio stage excluded — time spent post-investment is not counted)
-- **Deals Lost** KPI: count of all deals with `stage = 'Lost'` regardless of `lost_reason`
-- **Deals Discarded** KPI: count of all deals with `stage = 'Discarded'` regardless of `discarded_reason`
+- **Stage Activity in Period** (toggleable): distinct deals that entered each stage during the period, based on `changed_at` in stage history (not `date_added`) — via `usePipelineThroughput`
+- **Time invested section**: hours per deal × stage from `ReportingNz_stage_time_investment`; arrow (→) shown only for deals that genuinely advanced to a higher stage
+- **KPI cards**: Deals Entered Funnel, Portfolio (Invested), Entry → Portfolio %, Median Days to Portfolio
+- **Lost & Discarded section**: KPI cards + bar chart by stage + median days table comparing dropped vs advanced deals
 
 ---
 
@@ -391,6 +414,17 @@ All raw `stage` values from Affinity CRM:
 - **Deal Breakdown table**: 13 columns (includes Revenue (€m) and EBITDA (€m)), sortable, 8 rows default, "Show all" toggle
 - **Filters applied**: date range (on `date_added`), dealCaptain (on `captain`), channel (ilike on `channel_label`); stage filter not applied
 - `useAnalysisDeals` queryKey includes `[dateRange, dateFrom, dateTo, dealCaptain, channel]`
+
+---
+
+### Fundraising Activity (`/fundraising`)
+
+- **Access restricted** — `TeamAccessGate` (same `team_access` allowlist as `/team`)
+- **Source**: `ReportingNZ_LP_dashboard` table via `useLPDashboard()` — paginated in 1000-row pages, returns all rows
+- Tracks LP/investor interactions: emails sent/received, meetings, notes
+- Local filters: interaction type, partner, investor type (dropdowns); granularity toggle (Weekly / Monthly)
+- **Stacked bar chart**: interactions over time by type (email_sent, email_response, meeting, note, note_meeting)
+- **LP table**: sortable by name or interaction count, filterable by investor type and partner
 
 ---
 
@@ -464,7 +498,8 @@ Tier 1 → green, Tier 2 → blue, Tier 3 → amber, No Tier → muted grey
 | `shortName` | `lib/utils.js` | `(fullName) → string` | "John D." — first name + last initial |
 | `formatCurrency` | `lib/utils.js` | `(value) → string` | "€30k" — divides by 1000, no decimals |
 | `applyDateRange` | `lib/dateRange.js` | `(query, filters) → query` | Chainable Supabase query modifier for date filtering on `date_added` |
-| `getMondayISO` | `hooks/useTimeEntries.js` | `() → string` | Current week Monday as YYYY-MM-DD (local time) |
+| `getMondayISO` | `hooks/useTimeEntries.js` | `(offsetWeeks = 0) → string` | Monday of the current (or offset) week as YYYY-MM-DD (local time) |
+| `addDays` | `hooks/useTimeEntries.js` | `(isoDate, n) → string` | Adds n days to an ISO date string, returns YYYY-MM-DD |
 | `normalizeStage` | `hooks/useTeamAnalytics.js` | `(stage) → string` | Normalizes raw stage to display label via substring match |
 | `proprietaryGoalForRange` | `lib/config.js` | `(filters) → number` | Pro-rates annual goal (36) by active date range |
 
