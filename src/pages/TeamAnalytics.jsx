@@ -419,9 +419,12 @@ function Accordion({ summary, children, noSeparator = false }) {
           padding: 0,
         }}
       >
-        <span style={{ fontSize: '0.5625rem', color: 'var(--muted)', transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'none' }}>
-          ►
-        </span>
+        <svg
+          width="14" height="14" viewBox="0 0 14 14" fill="none"
+          style={{ flexShrink: 0, transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'none', color: 'var(--muted)' }}
+        >
+          <polyline points="4,2 10,7 4,12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         {summary}
       </button>
       {open && <div style={{ marginTop: 16, minWidth: 0, overflow: 'hidden' }}>{children}</div>}
