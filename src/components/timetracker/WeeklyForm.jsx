@@ -292,7 +292,7 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
     addRows(addons, 'addon')
     addRows([...longtail, { name: 'Other (Longtail)' }], 'longtail')
     addRows(origChannels, 'orig')
-    addRows(portfolio, 'portco')
+    addRows([...portfolio, { name: 'PortCo - Transversal' }], 'portco')
     addRows(internalCategories.map(c => c.name), 'internal')
 
     if (actualRows.length === 0 && expectedRows.length === 0) {
@@ -638,25 +638,30 @@ export default function WeeklyForm({ userEmail, onSubmitted }) {
         ))}
 
       {/* ── PORTFOLIO ── */}
-      {portfolio.length > 0 && (
-        <>
-          <SectionHeader label="Portfolio" count={portfolio.length} tooltip="Time spent on existing portfolio companies — operational support, board prep, add-on work, etc." />
-          {portfolio.map(d => (
-            <EntryRow
-              key={d.name}
-              label={d.name}
-              type="portco"
-              categoryKey={d.name}
-              entries={entries}
-              onChange={handleChange}
-            />
-          ))}
-        </>
-      )}
+      <>
+        <SectionHeader label="Portfolio" count={portfolio.length + 1} tooltip="Time spent on existing portfolio companies — operational support, board prep, add-on work, etc." />
+        {portfolio.map(d => (
+          <EntryRow
+            key={d.name}
+            label={d.name}
+            type="portco"
+            categoryKey={d.name}
+            entries={entries}
+            onChange={handleChange}
+          />
+        ))}
+        <EntryRow
+          label="PortCo - Transversal"
+          type="portco"
+          categoryKey="PortCo - Transversal"
+          entries={entries}
+          onChange={handleChange}
+        />
+      </>
 
       {/* ── INTERNAL ── */}
       {(() => {
-        const ADMIN_BUCKETS = ['Training & development', 'Out of office']
+        const ADMIN_BUCKETS = ['Training & development', 'Holidays & Out of Office']
         const coreInternal = internalCategories.filter(c => !ADMIN_BUCKETS.includes(c.name))
         const adminCategories = internalCategories.filter(c => ADMIN_BUCKETS.includes(c.name))
         return (
